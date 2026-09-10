@@ -94,6 +94,65 @@ namespace CommunityPatchExtras {
 
             // Feature configs, one BindConfig per feature.
             Patches.ZoneLoadRadiusPatch.BindConfig();
+            Patches.GrassDistancePatch.BindConfig();
+            Patches.CutscenePatch.BindConfig();
+        }
+
+        // The per-machine counterpart to BindServerConfig below: same shape, but NOT IsAdminOnly, so
+        // Jotunn leaves the entry alone instead of overwriting it with the server's. For settings whose
+        // right value is a property of the machine rather than of the world -- rendering distances,
+        // logging, UI. A setting that changes what the world does belongs in BindServerConfig instead.
+
+        /// <summary>
+        /// Binds a per-machine float constrained to a range.
+        /// </summary>
+        /// <param name="category">Config file section.</param>
+        /// <param name="key">Entry name within the section.</param>
+        /// <param name="value">Default value.</param>
+        /// <param name="description">Shown in the config file and the Configuration Manager.</param>
+        /// <param name="advanced">Hides the entry behind the Advanced toggle.</param>
+        /// <param name="valMin">Lowest accepted value.</param>
+        /// <param name="valMax">Highest accepted value.</param>
+        public static ConfigEntry<float> BindClientConfig(string category, string key, float value, string description, bool advanced = false, float valMin = 0, float valMax = 150) {
+            return cfg.Bind(category, key, value,
+                new ConfigDescription(description,
+                new AcceptableValueRange<float>(valMin, valMax),
+                new ConfigurationManagerAttributes { IsAdvanced = advanced })
+                );
+        }
+
+        /// <summary>
+        /// Binds a per-machine int constrained to a range.
+        /// </summary>
+        /// <param name="category">Config file section.</param>
+        /// <param name="key">Entry name within the section.</param>
+        /// <param name="value">Default value.</param>
+        /// <param name="description">Shown in the config file and the Configuration Manager.</param>
+        /// <param name="advanced">Hides the entry behind the Advanced toggle.</param>
+        /// <param name="valMin">Lowest accepted value.</param>
+        /// <param name="valMax">Highest accepted value.</param>
+        public static ConfigEntry<int> BindClientConfig(string category, string key, int value, string description, bool advanced = false, int valMin = 0, int valMax = 150) {
+            return cfg.Bind(category, key, value,
+                new ConfigDescription(description,
+                new AcceptableValueRange<int>(valMin, valMax),
+                new ConfigurationManagerAttributes { IsAdvanced = advanced })
+                );
+        }
+
+        /// <summary>
+        /// Binds a per-machine bool.
+        /// </summary>
+        /// <param name="category">Config file section.</param>
+        /// <param name="key">Entry name within the section.</param>
+        /// <param name="value">Default value.</param>
+        /// <param name="description">Shown in the config file and the Configuration Manager.</param>
+        /// <param name="advanced">Hides the entry behind the Advanced toggle.</param>
+        public static ConfigEntry<bool> BindClientConfig(string category, string key, bool value, string description, bool advanced = false) {
+            return cfg.Bind(category, key, value,
+                new ConfigDescription(description,
+                null,
+                new ConfigurationManagerAttributes { IsAdvanced = advanced })
+                );
         }
 
         // Every overload below marks the entry IsAdminOnly, which is what makes Jotunn's

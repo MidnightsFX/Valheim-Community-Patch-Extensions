@@ -22,8 +22,8 @@ namespace CommunityPatchExtras
     [NetworkCompatibility(CompatibilityLevel.VersionCheckOnly, VersionStrictness.Minor)]
     internal class CommunityPatchExtras : BaseUnityPlugin
     {
-        public const string PluginGUID = "MidnightsFX.CommunityPatchExtras";
-        public const string PluginName = "CommunityPatchExtras";
+        public const string PluginGUID = "MidnightsFX.ValheimCommunityPatchExtras";
+        public const string PluginName = "ValheimCommunityPatchExtras";
         public const string PluginVersion = "0.1.0";
 
         internal static ManualLogSource Log;
@@ -43,7 +43,7 @@ namespace CommunityPatchExtras
 
             // All startup hooks should go after the config & Logger have been wired up
             
-            EmbeddedResourceBundle = AssetUtils.LoadAssetBundleFromResources("CommunityPatchExtras.Assets.embedded_bundle", typeof(CommunityPatchExtras).Assembly);
+            //EmbeddedResourceBundle = AssetUtils.LoadAssetBundleFromResources("CommunityPatchExtras.Assets.embedded_bundle", typeof(CommunityPatchExtras).Assembly);
             LocalizationLoader.AddLocalizations();
 
             // Console commands. Registered here rather than from a Terminal/Console hook so the command

@@ -5,140 +5,187 @@ using Jotunn.Utils;
 using CommunityPatchExtras.Common;
 
 namespace CommunityPatchExtras.Patches {
-    // Exposes vanilla's zone load radii - ZoneSystem.m_activeArea (every object, shipped value 2 =
-    // a 5x5-zone / 320 m square) and m_activeDistantArea (distant-flagged prefabs only, shipped 2,
-    // extending the square by that many more zone rings). Both are plain scene-deserialized fields
-    // that nothing in the game ever writes; the game reads them live everywhere that matters, so
-    // writing them is the whole feature.
+    // Fills the two gaps left by vanilla's Simulation Distance setting.
     //
-    // Why: entering a heavily built-up area streams its objects in over the approach, and the
-    // Community Patch's "Spawn Burst Divisor" throttles that stream to protect frame time. Each +1
-    // of load radius hands the throttled stream ~64 m more approach runway, so pop-in completes
-    // before arrival instead of during it.
+    // WHAT CHANGED UNDER THIS PATCH. Valheim replaced ZoneSystem.m_activeArea and
+    // m_activeDistantArea - the two plain scene fields this patch used to write - with a
+    // SimulationDistance struct (near rings, far rings, and a "classic" flag choosing a square
+    // area over a circular one) behind a real graphics setting, levels 0-6 mapped by
+    // SimulationDistance.GetSimulationDistance. Vanilla now negotiates it as well: a client sends
+    // its desired value to the server, the server grants min(desired, its own) in
+    // ZNet.RPC_RequestValidSimulationDistance, and ZDOMan streams each peer objects at exactly the
+    // distance that peer was granted (ZDOMan.cs:1272). That is the same server-authority contract
+    // this patch used to enforce by hand, so the hand-rolled version is gone - vanilla's handshake
+    // does it, and does it in more places than a mod could reach.
     //
-    // The one rule that makes this safe in every environment: THE SERVER'S VALUES ARE THE ONLY
-    // TRUTH. ZDOMan.CreateSyncList sends each peer whatever the SERVER's fields say (ZDOMan.cs:738)
-    // - the values are never negotiated - and a client that raises its own m_activeArea without the
-    // server sending the extra ring does not just render empty ground: ZoneSystem.IsActiveAreaLoaded
-    // then demands the larger square before ZNetScene.CreateObjectsSorted spawns ANYTHING
-    // (ZNetScene.cs:157), which can stall all object population. So Apply() only uses the config
-    // values when this process is the server, or when Jotunn's config sync has delivered the
-    // server's values for this mod in this session; otherwise it holds the fields at the scene's
-    // own vanilla values (captured in the Awake postfix rather than hardcoded, so an Irongate
-    // change to the shipped numbers degrades gracefully). Jotunn additionally locks and resets
-    // every IsAdminOnly entry on a pure client at ZNet.Start, closing the edit-while-connected
-    // hole. Re-check SynchronizationManager's semantics on Jotunn major updates - this guard is
-    // built on them.
+    // WHAT IS STILL MISSING, which is what this patch now does:
     //
-    // Knock-ons of raising the near radius, documented rather than patched (all verified in the
-    // decompiled sources):
-    //  - The ownership/"activated" ring is m_activeArea - 1 (ZDOMan.ReleaseNearbyZDOS,
-    //    ZNetScene.InActiveArea), so creatures, spawners and structural wear are actively
-    //    simulated in a wider ring around each player - a real gameplay-surface change, which is
-    //    why the near default stays exactly vanilla.
-    //  - Steady-state loaded objects scale as (2a+1)^2: radius 3 is ~double radius 2, radius 4
-    //    ~triple. The distant ring holds only lightweight distant-flagged prefabs and is far
-    //    cheaper per zone, which is why its default IS raised.
-    //  - StaticPhysics copies m_activeArea per-instance in its Awake, so statics spawned before a
-    //    runtime change keep the old radius until recreated; self-heals as areas re-stream.
-    //  - The Community Patch's own ring-aware fixes (scene idle skip, spawn queue cache) snapshot
-    //    the radii and re-validate on change - no coupling.
-    [HarmonyPatch(typeof(ZoneSystem))]
+    //  1. THE FAR RING IS NO LONGER TUNABLE AT ALL. Every entry in vanilla's level table ships
+    //     FarSimulationDistance = 2 - level 6 widens the near ring to 6 and still stops distant
+    //     objects at two rings. The old m_activeDistantArea could be raised; nothing in vanilla
+    //     can now. These are lightweight distant-flagged landmark props and are cheap per zone,
+    //     which is why this mod raised them by default before and still does.
+    //
+    //  2. A SERVER CANNOT GRANT MORE THAN IT PICKED FOR ITSELF. The server's own value comes from
+    //     its graphics settings, which default to level 2 - old vanilla - so a dedicated server
+    //     caps every client at (2, 2) however high the player set the slider. Irongate's answer is
+    //     the -simulationdistance launch argument (FejdStartup.cs:603), which plenty of hosting
+    //     panels will not let an admin add and which needs a restart to change. Server Simulation
+    //     Distance Cap is the same knob as a live, admin-only config entry. It only ever raises,
+    //     so a server already set higher by either of vanilla's routes keeps what it had.
+    //
+    // HOW: one postfix on ZNet.GetDesiredSimulationDistance, the single method feeding the
+    // handshake, the client's own min() against the granted reply, and GetSyncedSimulationDistance.
+    // Widening its answer therefore widens every consumer - ZoneSystem.ApplySettings, ZDOMan,
+    // Heightmap, Water - through vanilla's own paths, and leaves no second copy of the state to
+    // keep honest.
+    //
+    // WHY THE NEAR RING IS OTHERWISE LEFT ALONE. It is now a real graphics setting, and how many
+    // zones a machine can simulate is a property of that machine, not of the world. The cap below
+    // bounds the player's choice; within that bound the choice is theirs, which is what vanilla
+    // intends and what this mod's old "default 2 = exactly vanilla" was approximating anyway.
+    //
+    // WHY THE FAR RING STILL NEEDS A TRUST CHECK, when the near ring no longer does. Vanilla's
+    // min() cannot arbitrate it: SimulationDistance's < operator only orders values whose far
+    // rings match, so a client wanting (2, 4) against a vanilla server at (2, 2) is *incomparable*,
+    // and both RPC_RequestValidSimulationDistance and RPC_ValidatedSimulationDistance fall through
+    // to the right-hand operand when neither side is less. The client would end up applying its
+    // own (2, 4) while the server keeps streaming distant objects at two rings. That is not a
+    // stall - IsActiveAreaLoaded reads only the near ring - but it is two rings of zone generation
+    // for objects that never arrive, so the far value is held at vanilla until Jotunn's config sync
+    // confirms the server is running this mod too.
+    //
+    // Knock-ons of a raised cap, documented rather than patched:
+    //  - The ownership/"activated" ring is derived from the near distance (ZDOMan.cs:956,
+    //    ZNetScene.InActiveArea), so a client that takes up a raised cap actively simulates
+    //    creatures, spawners and structural wear in a wider ring. That is vanilla's own trade for
+    //    its own setting; the cap here defaults to vanilla and moves only if an admin moves it.
+    //  - Raising the near ring past 2 also switches the shape from a classic square to a circle,
+    //    because that is what vanilla's level table does for every level above 2.
+    //  - Near-ring objects scale as roughly (2n+1)^2. The far ring holds only distant-flagged
+    //    prefabs and is far cheaper per zone, which is why it is the one raised by default.
+    [HarmonyPatch(typeof(ZNet))]
     internal static class ZoneLoadRadiusPatch {
-        internal static ConfigEntry<int> ActiveArea;
+        internal static ConfigEntry<int> ServerNearCap;
         internal static ConfigEntry<int> DistantArea;
-
-        // The scene's own values, captured before anything touches them; what unconfirmed clients
-        // are held at.
-        private static int _vanillaActive;
-        private static int _vanillaDistant;
-        private static bool _vanillaCaptured;
 
         // The ZNet instance whose session Jotunn confirmed our synced values for. Identity-compared
         // so a new session self-invalidates; the null guard matters, or teardown reads as confirmed.
         private static ZNet _confirmedFor;
 
         internal static void BindConfig() {
-            ActiveArea = ValConfig.BindServerConfig(
+            ServerNearCap = ValConfig.BindServerConfig(
                 "Zone Loading",
-                "Zone Load Radius",
+                "Server Simulation Distance Cap",
                 2,
-                "How many zone rings (64 m each) of full objects load around each player. 2 is " +
-                "exactly vanilla. Each +1 gives the Community Patch's throttled spawn stream one " +
-                "more zone of approach runway into built-up areas, but roughly doubles the " +
-                "steady-state loaded object count and widens the ring where creatures and " +
-                "spawners actively simulate. Server's value wins for everyone.",
+                "The highest Simulation Distance this server will grant a client, in zone rings of " +
+                "64 m. 2 is exactly vanilla's default and changes nothing. Vanilla lets a player " +
+                "pick up to 6 in the graphics menu but caps them at whatever the server itself is " +
+                "set to, which on a dedicated server is 2 unless it was launched with " +
+                "-simulationdistance - so raising this is what lets players actually use the " +
+                "setting. It only raises the ceiling: each client still runs at its own chosen " +
+                "value, and a wider ring costs that client roughly (2n+1)^2 loaded objects and " +
+                "widens the ring where creatures and spawners actively simulate.",
                 false,
                 2,
-                4);
+                6);
 
             DistantArea = ValConfig.BindServerConfig(
                 "Zone Loading",
                 "Distant Zone Load Radius",
                 4,
                 "How many further zone rings of distant-flagged objects (lightweight landmark " +
-                "props) load beyond the full ring. Vanilla is 2; these are cheap per zone, so the " +
-                "default is raised for better long-range silhouettes. Server's value wins for " +
-                "everyone.",
+                "props) load beyond the simulated ring. Vanilla ships 2 at every Simulation " +
+                "Distance and offers no way to change it. These are cheap per zone, so the default " +
+                "is raised for better long-range silhouettes. Server's value wins for everyone; a " +
+                "client connected to a server without this mod stays at vanilla.",
                 false,
                 2,
                 6);
 
-            ActiveArea.SettingChanged += (sender, args) => ScheduleApply();
-            DistantArea.SettingChanged += (sender, args) => ScheduleApply();
+            ServerNearCap.SettingChanged += (sender, args) => ScheduleRenegotiate();
+            DistantArea.SettingChanged += (sender, args) => ScheduleRenegotiate();
 
-            // The confirmation flag AND a re-apply: with Config Apply Delay at 0, the sync's own
-            // SettingChanged applies synchronously BEFORE this event fires and clamps to vanilla -
-            // scheduling again from here heals that ordering.
+            // The confirmation flag AND a re-negotiation: with Config Apply Delay at 0, the sync's own
+            // SettingChanged runs synchronously BEFORE this event fires and so negotiates while the
+            // far value is still clamped to vanilla - scheduling again from here heals that ordering.
             SynchronizationManager.OnConfigurationSynchronized += OnConfigurationSynchronized;
         }
 
-        private static void ScheduleApply() => ConfigChangeDebouncer.Schedule(typeof(ZoneLoadRadiusPatch), Apply);
+        private static void ScheduleRenegotiate() =>
+            ConfigChangeDebouncer.Schedule(typeof(ZoneLoadRadiusPatch), Renegotiate);
 
         private static void OnConfigurationSynchronized(object sender, ConfigurationSynchronizationEventArgs args) {
             if (args.UpdatedPluginGUIDs == null || !args.UpdatedPluginGUIDs.Contains(CommunityPatchExtras.PluginGUID)) { return; }
 
             if (ZNet.instance != null && !ZNet.instance.IsServer()) { _confirmedFor = ZNet.instance; }
 
-            ScheduleApply();
+            ScheduleRenegotiate();
         }
 
-        // The fields are freshly scene-deserialized here and nothing has written them yet.
-        [HarmonyPostfix]
-        [HarmonyPatch("Awake")]
-        private static void AwakePostfix(ZoneSystem __instance) {
-            _vanillaActive = __instance.m_activeArea;
-            _vanillaDistant = __instance.m_activeDistantArea;
-            _vanillaCaptured = true;
+        // Whether this process may act on the synced far value: it is the server, or Jotunn has
+        // delivered the server's config for this mod in this very session.
+        private static bool TrustedForSyncedValues(ZNet znet) =>
+            znet.IsServer() || (_confirmedFor != null && ReferenceEquals(_confirmedFor, znet));
+
+        // Vanilla's own re-entry point. It re-reads GetDesiredSimulationDistance - and so this
+        // patch - then applies the result directly when this process is the server, or re-requests
+        // it from the server otherwise, which is also the only thing that refreshes the per-peer
+        // record ZDOMan streams from. It compares against the value already in force first, so a
+        // change that turns out to be a no-op costs nothing.
+        private static void Renegotiate() {
+            ZNet znet = ZNet.instance;
+            if (znet == null) { return; }
+
+            znet.SimulationDistanceServerHandshake();
         }
 
-        // ZNet is alive by ZoneSystem.Start (vanilla's own Start dereferences it), so the
-        // server-or-confirmed question is answerable. On a joining client this lands before the
-        // config sync and is a deliberate no-op (vanilla over vanilla); the sync event applies the
-        // server's values moments later.
+        // This is a hot path, not a startup one: GetSyncedSimulationDistance calls through here, and
+        // ZNetScene.PointInsideActiveArea calls that once per point tested, so WearNTear,
+        // StaticPhysics, SpawnArea and ZDOMan reach it thousands of times a frame. Hence the
+        // ordering below - the config comparison is a field read and settles the common case where
+        // both entries are at their defaults, before either the IsServer() or the trust check runs.
+        // Both branches only ever raise, so a value already higher by any other route survives.
+        //
+        // IsServer() covers a dedicated server, a listen server's host and singleplayer alike -
+        // ZNet.IsSinglePlayer is defined as a server that is not open, so it implies this.
         [HarmonyPostfix]
-        [HarmonyPatch("Start")]
-        private static void StartPostfix() => Apply("world start");
+        [HarmonyPatch("GetDesiredSimulationDistance")]
+        private static void GetDesiredSimulationDistancePostfix(ZNet __instance, ref SimulationDistance __result) {
+            int near = __result.NearSimulationDistance;
+            int far = __result.FarSimulationDistance;
+            bool classic = __result.IsClassic;
 
-        private static void Apply() => Apply("setting changed");
+            if (ServerNearCap != null && ServerNearCap.Value > near && __instance.IsServer()) {
+                near = ServerNearCap.Value;
+                // Vanilla's level table is classic only at levels 0 and 2; every wider level is
+                // circular, which is the cheaper shape and the one the rest of the game is tuned for.
+                classic = false;
+            }
 
-        private static void Apply(string reason) {
-            ZoneSystem zoneSystem = ZoneSystem.instance;
-            if (zoneSystem == null || !_vanillaCaptured) { return; }
+            if (DistantArea != null && DistantArea.Value > far && TrustedForSyncedValues(__instance)) {
+                far = DistantArea.Value;
+            }
 
-            bool isServer = ZNet.instance != null && ZNet.instance.IsServer();
-            bool trusted = isServer || (_confirmedFor != null && ReferenceEquals(_confirmedFor, ZNet.instance));
+            if (near == __result.NearSimulationDistance
+                && far == __result.FarSimulationDistance
+                && classic == __result.IsClassic) {
+                return;
+            }
 
-            int area = trusted && ActiveArea != null ? ActiveArea.Value : _vanillaActive;
-            int distant = trusted && DistantArea != null ? DistantArea.Value : _vanillaDistant;
+            __result = new SimulationDistance(near, far, classic);
+        }
 
-            if (zoneSystem.m_activeArea == area && zoneSystem.m_activeDistantArea == distant) { return; }
-
-            zoneSystem.m_activeArea = area;
-            zoneSystem.m_activeDistantArea = distant;
-
-            string authority = isServer ? "server authority" : trusted ? "server-synced" : "unconfirmed client, holding vanilla";
-            Logger.LogInfo($"Zone load radius applied: active {area}, distant {distant} ({reason}; {authority}).");
+        // The one honest place to report from: vanilla routes both the server applying its own
+        // value and a client applying what the server granted it through here, so this logs what
+        // is actually in force rather than what was asked for.
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(ZNet.ApplySimulationDistance))]
+        private static void ApplySimulationDistancePostfix(SimulationDistance simulationDistance) {
+            Logger.LogInfo(
+                $"Simulation distance in effect: near {simulationDistance.NearSimulationDistance}, " +
+                $"far {simulationDistance.FarSimulationDistance} " +
+                $"({(simulationDistance.IsClassic ? "square" : "circular")}).");
         }
     }
 }
