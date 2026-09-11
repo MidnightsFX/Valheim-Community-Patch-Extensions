@@ -18,7 +18,6 @@ namespace CommunityPatchExtras {
         // Add Client sided config entries under here
         public static ConfigEntry<bool> EnableDebugMode;
         public static ConfigEntry<bool> EnableTerminalColors;
-        public static ConfigEntry<bool> ShowQuickConfigButton;
 
         // Add Server synced config entries under here
         public static ConfigEntry<int> InMemoryModificationsPerTick;
@@ -74,15 +73,6 @@ namespace CommunityPatchExtras {
                 new ConfigDescription("Colours this mod's console command output by severity.",
                 null,
                 new ConfigurationManagerAttributes { }));
-
-            // Whether this mod appears in the shared bottom-right config launcher. Client config and not
-            // IsAdminOnly: it is a per-machine UI preference, not a game rule. The shared button hides
-            // itself once every mod that uses it has opted out.
-            ShowQuickConfigButton = Config.Bind("Client config", "ShowQuickConfigButton", true,
-                new ConfigDescription("Show this mod in the shared in-game config launcher (bottom right of the main and pause menus).",
-                null,
-                new ConfigurationManagerAttributes { }));
-            ShowQuickConfigButton.SettingChanged += (sender, args) => ExampleConfigPanel.ApplyRegistration();
 
             // Instantiate server synced config entries here
             InMemoryModificationsPerTick = BindServerConfig("Config", "Updates Per Tick", 20, "Number of updates per tick that are applied when modifying items or pieces.", true, 1, 150);

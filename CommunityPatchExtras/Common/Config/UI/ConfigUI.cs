@@ -14,7 +14,7 @@ namespace CommunityPatchExtras {
     // DEPENDENCY RULE FOR THIS WHOLE FOLDER: nothing under Common/Config/UI may reference YamlConfigFile,
     // YamlConfigManager, ConfigNetwork or ValidationReport. Its only in-repo dependency is Logger. That is
     // what lets a mod with a completely different config system -- StarLevelSystem has its own -- take
-    // this folder and the shared launcher without also swallowing the yaml framework next door.
+    // this folder without also swallowing the yaml framework next door.
     //
     // Coordinate convention, used by everything here: top-left origin. Every rect sets
     // anchorMin = anchorMax = pivot = (0,1) and positions itself with anchoredPosition = (x, -y), so y

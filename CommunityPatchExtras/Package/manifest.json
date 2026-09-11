@@ -1,7 +1,7 @@
 {
   "name": "CommunityPatchExtras",
   "description": "Opt-in world and performance tunables built on top of the Valheim Community Patch.",
-  "version_number": "0.1.1",
+  "version_number": "0.1.2",
   "website_url": "https://github.com/MidnightsFX/Valheim-Community-Patch-Extensions",
   "dependencies": [
     "denikson-BepInExPack_Valheim-5.4.2350",

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2
+
+- Removes quick configuration button that was not wired up
+
 ## 0.1.1
 
 - Added icon

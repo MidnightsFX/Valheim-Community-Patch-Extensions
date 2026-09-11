@@ -24,7 +24,7 @@ namespace CommunityPatchExtras
     {
         public const string PluginGUID = "MidnightsFX.ValheimCommunityPatchExtras";
         public const string PluginName = "ValheimCommunityPatchExtras";
-        public const string PluginVersion = "0.1.1";
+        public const string PluginVersion = "0.1.2";
 
         internal static ManualLogSource Log;
         internal ValConfig cfg;
@@ -54,10 +54,6 @@ namespace CommunityPatchExtras
             // A config whose defaults need game state can Register() later -- registration after Init does
             // the per-file work immediately. See Common/Config.
             YamlConfigManager.Init();
-
-            // The shared in-game config launcher. After YamlConfigManager, because the example panel edits
-            // a registered file. See Common/Config/UI.
-            ExampleConfigPanel.Init();
 
             // Configs are not written until after they are all wired up, they exist in memory before this.
             // Flushing all of the configs at once is a significant speedup in mod load time

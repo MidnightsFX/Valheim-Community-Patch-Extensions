@@ -1,8 +1,6 @@
 # In-game config UI
 
-A widget kit for building config panels out of Jotunn's `GUIManager` primitives, plus a **shared
-launcher**: one button bottom-right of the main and pause menus that lists every loaded mod which has
-registered a panel.
+A widget kit for building config panels out of Jotunn's `GUIManager` primitives.
 
 ## Dependency rule
 
@@ -10,86 +8,7 @@ registered a panel.
 `ValidationReport`.** Its only in-repo dependency is `Logger`.
 
 That is not tidiness — it is what lets a mod with a completely different config system take this folder
-and join the shared launcher without also swallowing the YAML framework next door. Keep it true.
-
-## Registering a panel
-
-```csharp
-internal static void Init() {
-    ConfigUILauncher.Init();
-    ApplyRegistration();
-}
-
-internal static void ApplyRegistration() {
-    if (ValConfig.ShowQuickConfigButton.Value) { ConfigUILauncher.Register("MyMod", OpenPanel); }
-    else { ConfigUILauncher.Unregister("MyMod"); }
-}
-```
-
-Call `Init()` from `Awake`. Wire `ShowQuickConfigButton.SettingChanged` to `ApplyRegistration` so the
-entry can be turned off without a restart. With exactly one mod registered the button opens that panel
-directly instead of showing a one-item list.
-
-The button is visible **only to a host or a server admin** — a remote non-admin's edits would be
-overwritten by the next server broadcast, so offering the editor at all would be a lie. Visibility
-re-evaluates on `OnAdminStatusChanged`, so it appears when admin status arrives without a relog.
-
-## Where the button appears
-
-**Main menu and pause menu, never the in-game HUD.** Two GameObjects, one per parent, and exactly one of
-them is ever on screen:
-
-| Parent | Shown when |
-| --- | --- |
-| `GUIManager.CustomGUIFront` | `FejdStartup.instance != null`, i.e. the `start` scene |
-| `Menu.m_root` | Valheim shows the pause menu — `m_root` is toggled by the game, so this follows for free |
-
-The `FejdStartup` gate is load-bearing. Jotunn **rebuilds `CustomGUIFront` on every scene change**
-(`GUIManager.TryCreateGUI`, wired to `SceneManager.sceneLoaded`), so without it the `main` scene grows its
-own copy of the button: one floating over the HUD, and a second one beside the pause menu's, at a
-different position because `CustomGUIFront` carries its own `Canvas` and `CanvasScaler`.
-
-Both parents route through the single `EnsureCornerButton(existing, parent)`. It bails when the button it
-already holds is still parented to `parent`, then falls back to `parent.Find(ButtonObjectName)` and adopts
-that if present, and only creates as a last resort — so `OnCustomGUIAvailable` and the `Menu.Start`
-postfix firing repeatedly cannot stack buttons.
-
-The mod list itself closes on its top-right `X` or on **Escape**. In-world that goes through a prefix on
-`Menu.Update`, which closes the list and returns `false` for that one frame: Valheim reads Escape inline
-there, so swallowing the frame is the only way to keep the press from also collapsing the pause menu the
-list was opened from. One press dismisses the list, a second dismisses the menu. In the start scene there
-is no `Menu`, so the broker's own `Update` handles it and no suppression is needed.
-
-## The frozen cross-assembly contract
-
-Every mod compiles its **own** `QuickConfigBroker`, so those types are unrelated as far as the CLR is
-concerned and no cast between them can ever work. The first copy to run creates a `DontDestroyOnLoad`
-GameObject named `ModQuickConfigLauncher`; every copy after that finds it and calls into whichever broker
-is already there **by reflection**, binding `Register(string, Action)` by exact signature. Only BCL types
-cross the boundary.
-
-```csharp
-internal const string BrokerObjectName = "ModQuickConfigLauncher";
-internal const string BrokerTypeName   = "QuickConfigBroker";
-internal const string ButtonObjectName = "ModQuickConfigButton";
-internal const int    ContractVersion  = 2;
-
-public int  BrokerVersion { get; }
-public void Register(string modName, Action openPanel);
-public void Unregister(string modName);
-public bool IsRegistered(string modName);
-```
-
-**Amendment rules: additive only.** Never rename a member, reorder or retype a parameter, add a
-same-arity overload, or narrow visibility. A newer caller probes with `GetMethod(...) != null` and
-degrades silently. A genuine breaking change would need a *new* `BrokerObjectName`, i.e. two buttons on
-screen during the transition — so do not make one.
-
-**First broker to create the GameObject wins.** Version mismatches are advisory and logged once at Info,
-naming the owning assembly; registration never refuses. The accepted cost is that an old copy inside an
-unrelated mod pins the launcher UI at an old version. The alternative — handing the launcher over to a
-newer copy mid-session — would leave every other assembly's cached `MethodInfo` pointing at a retired
-component, which fails silently and much worse.
+without also swallowing the YAML framework next door. Keep it true.
 
 ## Widgets
 
@@ -144,14 +63,5 @@ renders correctly when dropped into a mod that has no localization set up at all
 
 ## Dropping this into another mod
 
-Copy `Common/Config/UI/`, then:
-
-1. Make sure your `Logger` exposes `LogDebug` / `LogInfo` / `LogWarning` / `LogError`.
-2. Add a `ConfigEntry<bool> ShowQuickConfigButton` (Client config, default true, **not** `IsAdminOnly` —
-   it is a per-machine UI preference).
-3. Replace `Examples/ExampleConfigPanel.cs` with your own panel and registration.
-4. Call your `Init()` from `Awake`.
-
-The broker patches `Menu.Start` with a private Harmony instance keyed on the frozen object name, so a
-second mod's copy cannot double-patch it and a plugin calling `Harmony.CreateAndPatchAll(assembly)`
-cannot either.
+Copy `Common/Config/UI/`, and make sure your `Logger` exposes `LogDebug` / `LogInfo` / `LogWarning` /
+`LogError`.
