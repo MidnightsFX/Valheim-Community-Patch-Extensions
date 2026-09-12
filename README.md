@@ -1,1 +1,1 @@
-JotunnModStub/Package/README.md
+CommunityPatchExtras/Package/README.md
