@@ -1,4 +1,4 @@
-﻿using BepInEx;
+using BepInEx;
 using BepInEx.Configuration;
 using Jotunn.Entities;
 using Jotunn.Managers;
@@ -96,6 +96,7 @@ namespace CommunityPatchExtras {
             Patches.ZoneLoadRadiusPatch.BindConfig();
             Patches.GrassDistancePatch.BindConfig();
             Patches.CutscenePatch.BindConfig();
+            Patches.WorldSaveNoticePatch.BindConfig();
         }
 
         // The per-machine counterpart to BindServerConfig below: same shape, but NOT IsAdminOnly, so

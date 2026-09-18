@@ -1,4 +1,4 @@
-# Community Patch Extras
+﻿# Community Patch Extras
 
 Opt-in world and performance tunables built on top of the
 [Valheim Community Patch](https://github.com/MidnightsFX/Valheim-Community-Patch). Where the
@@ -105,6 +105,19 @@ gallery, the menu's Credits button, and the `cinematic` console command — are 
   instead, exactly as a night with nothing queued does. The queue is still broadcast to every
   player and each client decides for itself, so turning this off never skips anyone else's dream.
 - **Play Ending Cinematic** — the outro video and rolling credits you get from the end.
+
+### HUD & Notifications
+
+In native Valheim, Game.UpdateSaving broadcasts a 30-second autosave countdown warning ($msg_worldsavewarning 30s) with MessageHud.MessageType.Center. This displays a giant, screen-filling yellow banner directly across the player's crosshair and combat view. Many dedicated servers and administrative tools broadcast similar countdowns and save confirmations to the center of the screen as well.
+
+During combat, boss encounters, sailing, or precise building, having the center of the screen obscured by save alerts is disruptive and hazardous.
+
+- **World Save Notice Mode** *(default Native)* - controls how world save notifications are displayed on the HUD:
+  - Native *(default)*: Preserves the game's default behavior (large center-screen toast).
+  - RelocateToTopLeft: Demotes the center-screen save warnings and completion notices to the subtle top-left corner notification feed, keeping you informed without blinding your crosshair.
+  - Mute: Completely silences the center save notifications.
+
+Per-machine presentation setting: not synced from the server, and inert on dedicated servers where HUD messages are not rendered.
 
 ## Installation (manual)
 
