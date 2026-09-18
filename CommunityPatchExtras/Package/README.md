@@ -106,6 +106,40 @@ gallery, the menu's Credits button, and the `cinematic` console command — are 
   player and each client decides for itself, so turning this off never skips anyone else's dream.
 - **Play Ending Cinematic** — the outro video and rolling credits you get from the end.
 
+### Tamed Creatures
+
+- **Commandable Tames** *(default on, vanilla off for most creatures)* — lets you tell **any** tamed
+  creature to follow or to stay, not just the few Valheim marked for it. Vanilla allows it for
+  wolves, lox and asksvins and for nothing else, so a tamed boar cannot be called: it wanders its
+  pen forever and the only way to move one is to build a corridor and herd it. Nothing about a boar
+  makes it incapable — the entire difference is a single flag on the creature's prefab, and this
+  raises it.
+
+  Everything behind that flag is already generic and already on the boar, so nothing is
+  reimplemented: interacting with a commandable tame runs Valheim's own follow/stay toggle, writes
+  Valheim's own saved follow target, and uses Valheim's own "stay here" patrol point. Taming itself
+  is untouched, and wild creatures are unaffected — the game checks that a creature is tamed before
+  it ever looks at the flag.
+
+  **The trade**, which is exactly the one a wolf owner already makes: Use now *commands* those
+  creatures instead of petting them, so they lose the affection message. Nothing else is lost — the
+  petting and commanding counters are display-only stats that no unlock reads.
+
+  Turning this back off **releases** anything currently following, rather than leaving animals
+  trailing you with no way to stop them: a creature the setting no longer covers has its saved
+  follow target cleared, both for everything loaded at the time and for everything else as it
+  streams back in. A creature left on "stay" keeps that spot as the centre of its wandering, which
+  is where it was already standing.
+- **Commandable Tames Exceptions** *(default empty, advanced)* — prefab names to leave exactly as
+  vanilla ships them, comma separated, for when you want commandable boars but not commandable hens
+  (`Hen,Chicken`). Matched ignoring case; listed creatures keep petting, and any already following
+  someone is released.
+
+Server-synced, unlike the grass and cutscene settings: commanding writes saved world state that the
+server owns and streams to everyone, so whether boars can be ordered around is the admin's call. A
+client without the mod on a server with it simply pets its own animals while its neighbour commands
+them — nothing desyncs, because the command itself is vanilla's, registered on every machine.
+
 ## Installation (manual)
 
 Drop `CommunityPatchExtras.dll` into `BepInEx/plugins`, alongside the Valheim Community Patch

@@ -87,6 +87,7 @@ namespace CommunityPatchExtras {
             Patches.GrassDistancePatch.BindConfig();
             Patches.CutscenePatch.BindConfig();
             Patches.PlayerCreationDiagnosticsPatch.BindConfig();
+            Patches.CommandableTamesPatch.BindConfig();
         }
 
         // The per-machine counterpart to BindServerConfig below: same shape, but NOT IsAdminOnly, so

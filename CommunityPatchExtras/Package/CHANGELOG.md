@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.4
+
+- Added Commandable Tames: any tamed creature can be told to follow or stay, boars included
+
 ## 0.1.3
 
 - Added Diagnostics for skill spam
