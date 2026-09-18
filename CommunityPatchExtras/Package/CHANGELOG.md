@@ -3,6 +3,7 @@
 ## 0.1.4
 
 - Added Commandable Tames: any tamed creature can be told to follow or stay, boars included
+- Added World Save Notice Mode HUD setting (RelocateToTopLeft, Mute, Native) to prevent autosave notifications from obscuring the center of the screen.
 
 ## 0.1.3
 
