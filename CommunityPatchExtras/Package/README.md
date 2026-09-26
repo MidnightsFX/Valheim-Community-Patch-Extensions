@@ -117,6 +117,20 @@ gallery, the menu's Credits button, and the `cinematic` console command — are 
   (`Hen,Chicken`). Matched ignoring case; listed creatures keep petting, and any already following
   someone is released. Server-synced.
 
+### Building
+
+- **Deconstruct Boats And Carts** *(default on, vanilla off)* — the hammer's remove click works on
+  boats and carts. Vanilla refuses it, so the only way to get rid of one is to smash it. That
+  already returns the full build cost, so this changes how you take a vehicle apart, not what you
+  get back. Covers every boat, the cart, and the battering ram, catapult and sled, which are built
+  on the same cart class.
+
+  Refused (with vanilla's "can't remove this now" message) while anyone is pulling or riding the
+  cart, or standing anywhere on the boat, not just at the helm. Anything in the vehicle's hold drops
+  in a floating crate, as when it breaks. Otherwise the usual removal rules apply: wards, no-build
+  zones, and a **workbench in range**, which every vehicle lists as its crafting station, the Raft
+  included. So a boat moored away from base needs a workbench nearby. Server-synced; a client on a
+  server without this mod keeps vanilla behaviour.
 
 ### HUD & Notifications
 

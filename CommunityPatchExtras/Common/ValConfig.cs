@@ -89,6 +89,7 @@ namespace CommunityPatchExtras {
             Patches.PlayerCreationDiagnosticsPatch.BindConfig();
             Patches.CommandableTamesPatch.BindConfig();
             Patches.WorldSaveNoticePatch.BindConfig();
+            Patches.VehicleDeconstructPatch.BindConfig();
 
         }
 

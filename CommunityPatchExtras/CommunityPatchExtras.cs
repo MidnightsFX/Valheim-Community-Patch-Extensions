@@ -24,16 +24,19 @@ namespace CommunityPatchExtras
     {
         public const string PluginGUID = "MidnightsFX.ValheimCommunityPatchExtras";
         public const string PluginName = "ValheimCommunityPatchExtras";
-        public const string PluginVersion = "0.1.4";
+        public const string PluginVersion = "0.2.0";
 
         internal static ManualLogSource Log;
         internal ValConfig cfg;
-        public static CustomLocalization Localization = LocalizationManager.Instance.GetLocalization();
+        // Set in Awake, not here: a static initialiser can run before BepInEx has registered this plugin, and Jotunn
+        // then attributes the whole mod - its RPC names included - to Jotunn itself for the rest of the session.
+        public static CustomLocalization Localization;
         public static AssetBundle EmbeddedResourceBundle;
 
         private readonly Harmony harmony = new Harmony(PluginGUID);
 
         public void Awake() {
+            Localization = LocalizationManager.Instance.GetLocalization();
             Log = this.Logger;
             cfg = new ValConfig(Config);
 
