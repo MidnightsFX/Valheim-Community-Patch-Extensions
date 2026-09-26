@@ -1,4 +1,4 @@
-﻿# Community Patch Extras
+# Community Patch Extras
 
 Opt-in world and performance tunables built on top of the
 [Valheim Community Patch](https://github.com/MidnightsFX/Valheim-Community-Patch). Where the
