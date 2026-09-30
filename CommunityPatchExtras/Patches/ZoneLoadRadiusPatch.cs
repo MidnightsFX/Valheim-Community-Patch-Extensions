@@ -1,3 +1,4 @@
+using System;
 using BepInEx.Configuration;
 using HarmonyLib;
 using Jotunn.Managers;
@@ -29,16 +30,25 @@ namespace CommunityPatchExtras.Patches {
     //  2. A SERVER CANNOT GRANT MORE THAN IT PICKED FOR ITSELF. The server's own value comes from
     //     its graphics settings, which default to level 2 - old vanilla - so a dedicated server
     //     caps every client at (2, 2) however high the player set the slider. Irongate's answer is
-    //     the -simulationdistance launch argument (FejdStartup.cs:603), which plenty of hosting
+    //     the -simulationdistance launch argument (FejdStartup.cs:608), which plenty of hosting
     //     panels will not let an admin add and which needs a restart to change. Server Simulation
-    //     Distance Cap is the same knob as a live, admin-only config entry. It only ever raises,
-    //     so a server already set higher by either of vanilla's routes keeps what it had.
+    //     Distance Cap is the same knob as a live, admin-only config entry. It only ever raises.
+    //
+    //  3. THE LAUNCH ARGUMENT BYPASSES THE HANDSHAKE. FejdStartup queues it onto
+    //     ZNet.s_onZNetStart, which calls ApplySimulationDistance directly at the top of ZNet.Start -
+    //     after ZNet.Awake has already run the handshake through this patch. Left alone it reset the
+    //     server to (N, 2) for the whole session, dropping both the far ring and the cap, until an
+    //     edit to either entry below renegotiated - which then recomputed from the graphics settings
+    //     and silently dropped N instead. So on a server the launch argument, parsed the same way,
+    //     replaces the graphics value as the base the two entries raise from, and a ZNet.Start
+    //     postfix re-runs the handshake once vanilla's direct apply is done.
     //
     // HOW: one postfix on ZNet.GetDesiredSimulationDistance, the single method feeding the
     // handshake, the client's own min() against the granted reply, and GetSyncedSimulationDistance.
     // Widening its answer therefore widens every consumer - ZoneSystem.ApplySettings, ZDOMan,
     // Heightmap, Water - through vanilla's own paths, and leaves no second copy of the state to
-    // keep honest.
+    // keep honest. Plus one on ZNet.Start for (3), vanilla's only write to the value that does not
+    // come through here.
     //
     // WHY THE NEAR RING IS OTHERWISE LEFT ALONE. It is now a real graphics setting, and how many
     // zones a machine can simulate is a property of that machine, not of the world. The cap below
@@ -72,6 +82,22 @@ namespace CommunityPatchExtras.Patches {
         // The ZNet instance whose session Jotunn confirmed our synced values for. Identity-compared
         // so a new session self-invalidates; the null guard matters, or teardown reads as confirmed.
         private static ZNet _confirmedFor;
+
+        // This process's -simulationdistance launch argument, or null without one. Parsed as
+        // FejdStartup.ParseArguments does - exact match, last one wins, through the same
+        // GetSimulationDistance - so it is the value vanilla applies at ZNet.Start, not a guess at it.
+        private static readonly SimulationDistance? LaunchDistance = ParseLaunchDistance();
+
+        private static SimulationDistance? ParseLaunchDistance() {
+            SimulationDistance? parsed = null;
+            string[] args = Environment.GetCommandLineArgs();
+            for (int i = 0; i < args.Length - 1; i++) {
+                if (args[i] == "-simulationdistance" && int.TryParse(args[i + 1], out int level)) {
+                    parsed = SimulationDistance.GetSimulationDistance(level);
+                }
+            }
+            return parsed;
+        }
 
         internal static void BindConfig() {
             ServerNearCap = ValConfig.BindServerConfig(
@@ -145,7 +171,7 @@ namespace CommunityPatchExtras.Patches {
         // StaticPhysics, SpawnArea and ZDOMan reach it thousands of times a frame. Hence the
         // ordering below - the config comparison is a field read and settles the common case where
         // both entries are at their defaults, before either the IsServer() or the trust check runs.
-        // Both branches only ever raise, so a value already higher by any other route survives.
+        // Both config branches only ever raise, so a value already higher by any other route survives.
         //
         // IsServer() covers a dedicated server, a listen server's host and singleplayer alike -
         // ZNet.IsSinglePlayer is defined as a server that is not open, so it implies this.
@@ -155,6 +181,19 @@ namespace CommunityPatchExtras.Patches {
             int near = __result.NearSimulationDistance;
             int far = __result.FarSimulationDistance;
             bool classic = __result.IsClassic;
+
+            // Replaces rather than raises, as vanilla's own apply of it does: an admin may launch
+            // below level 2 to spare a weak host, and that has to survive a renegotiation too. On a
+            // listen host it also pins the host's own slider for the session, where vanilla would let
+            // a later graphics change override the argument; the argument is the more deliberate of
+            // the two. HasValue goes first - a static field, false on nearly every server - so
+            // without the argument this costs nothing.
+            if (LaunchDistance.HasValue && __instance.IsServer()) {
+                SimulationDistance launch = LaunchDistance.Value;
+                near = launch.NearSimulationDistance;
+                far = launch.FarSimulationDistance;
+                classic = launch.IsClassic;
+            }
 
             if (ServerNearCap != null && ServerNearCap.Value > near && __instance.IsServer()) {
                 near = ServerNearCap.Value;
@@ -174,6 +213,26 @@ namespace CommunityPatchExtras.Patches {
             }
 
             __result = new SimulationDistance(near, far, classic);
+        }
+
+        // The -simulationdistance launch argument lands here, written straight through
+        // ApplySimulationDistance from s_onZNetStart at the top of Start - after ZNet.Awake's
+        // handshake already applied this patch's value, which it overwrites. Re-running the handshake
+        // afterwards puts the far ring and the cap back on top of it. With no argument the handshake
+        // finds its answer already in force and returns, so this costs nothing. No peer can be
+        // connected yet, so there is nobody to re-grant.
+        [HarmonyPostfix]
+        [HarmonyPatch("Start")]
+        private static void StartPostfix(ZNet __instance) {
+            if (!__instance.IsServer()) { return; }
+
+            if (LaunchDistance.HasValue) {
+                Logger.LogInfo(
+                    $"Launched with -simulationdistance (near {LaunchDistance.Value.NearSimulationDistance}); " +
+                    "using it as the base the Zone Loading settings raise from.");
+            }
+
+            __instance.SimulationDistanceServerHandshake();
         }
 
         // The one honest place to report from: vanilla routes both the server applying its own

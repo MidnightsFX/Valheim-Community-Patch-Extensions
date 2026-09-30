@@ -86,10 +86,10 @@ namespace CommunityPatchExtras {
             Patches.ZoneLoadRadiusPatch.BindConfig();
             Patches.GrassDistancePatch.BindConfig();
             Patches.CutscenePatch.BindConfig();
-            Patches.PlayerCreationDiagnosticsPatch.BindConfig();
             Patches.CommandableTamesPatch.BindConfig();
             Patches.WorldSaveNoticePatch.BindConfig();
             Patches.VehicleDeconstructPatch.BindConfig();
+            Patches.HildirChestSalePatch.BindConfig();
 
         }
 

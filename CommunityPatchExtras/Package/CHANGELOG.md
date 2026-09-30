@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0
+
+- Added Hildir Buys Spare Chests: once a chest has been handed in, Hildir buys spare copies of it through the sell button, with a configurable price per chest
+- Fixed the `-simulationdistance` launch argument resetting a server's zone loading for the whole session: it now serves as the base, and Server Simulation Distance Cap and Distant Zone Load Radius still apply on top of it
+- Removed the temporary skill spam diagnostics (Diagnose Player Object Creation)
+
 ## 0.2.0
 
 - Added Commandable Tames: any tamed creature can be told to follow or stay, boars included

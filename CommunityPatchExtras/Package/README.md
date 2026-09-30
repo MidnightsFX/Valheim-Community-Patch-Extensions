@@ -27,7 +27,9 @@ the player's choice, as vanilla intends.
   approach runway into heavily built-up areas, so pop-in finishes before you arrive. Costs are
   real and land on the client that opts in: loaded objects scale as roughly (2n+1)², and
   creatures/spawners actively simulate in a wider ring — which is why the default changes nothing.
-  This only ever *raises* the ceiling; a client asking for less still gets less.
+  This only ever *raises* the ceiling; a client asking for less still gets less. A server launched
+  with `-simulationdistance` uses that as its starting point, and this cap and the distant radius
+  below still apply on top of it from the moment the server starts.
 - **Distant Zone Load Radius** *(default 4, vanilla 2)* — how many further rings of
   distant-flagged objects (lightweight landmark props) load beyond the simulated ring. Vanilla
   ships 2 at *every* Simulation Distance and offers no way to change it. Cheap per zone, so the
@@ -131,6 +133,28 @@ gallery, the menu's Credits button, and the `cinematic` console command — are 
   zones, and a **workbench in range**, which every vehicle lists as its crafting station, the Raft
   included. So a boat moored away from base needs a workbench nearby. Server-synced; a client on a
   server without this mod keeps vanilla behaviour.
+
+### Traders
+
+- **Hildir Buys Spare Chests** *(default on, vanilla off)* — Hildir will buy extra copies of her
+  three quest chests. In vanilla a second chest is dead weight: she only tells you she already has
+  it, no trader will buy it, and it cannot go through a portal. Each of her dungeons is placed up to
+  three times per world, and every one drops its chest, so spares turn up, especially on a server.
+
+  The first chest of each kind still has to be **given** to her. A chest only becomes sellable once
+  that same chest has been handed in, so selling can never take the place of the quest or cost you
+  her unlocks. Each chest counts separately: handing in the Brass Chest makes spare Brass Chests
+  sellable, and the other two stay quest items until they are handed in too. Sales go through the
+  ordinary sell button, after any gems or other valuables you are carrying. Server-synced; a client
+  on a server without this mod keeps vanilla behaviour.
+- **Brass Chest Price** *(default 500)* — coins paid per spare Hildir's Brass Chest, from the
+  Smouldering Tomb (Black Forest). Server-synced.
+- **Silver Chest Price** *(default 700)* — coins paid per spare Hildir's Silver Chest, from the
+  Howling Cavern (Mountains). Server-synced.
+- **Bronze Chest Price** *(default 900)* — coins paid per spare Hildir's Bronze Chest, from the
+  Sealed Tower (Plains). Server-synced.
+
+  For scale, the most a trader pays for any vanilla valuable is 175.
 
 ### HUD & Notifications
 
