@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.0
+
+- Boss summon, wake and defeat announcements now only reach players near the boss instead of the whole server.
+
 ## 0.3.0
 
 - Added Hildir Buys Spare Chests: once a chest has been handed in, Hildir buys spare copies of it through the sell button, with a configurable price per chest

@@ -90,6 +90,7 @@ namespace CommunityPatchExtras {
             Patches.WorldSaveNoticePatch.BindConfig();
             Patches.VehicleDeconstructPatch.BindConfig();
             Patches.HildirChestSalePatch.BindConfig();
+            Patches.BossAnnouncementRangePatch.BindConfig();
 
         }
 

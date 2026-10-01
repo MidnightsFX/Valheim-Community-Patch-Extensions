@@ -156,6 +156,24 @@ gallery, the menu's Credits button, and the `cinematic` console command — are 
 
   For scale, the most a trader pays for any vanilla valuable is 175.
 
+### Bosses
+
+- **Limit Boss Announcements** *(default on, vanilla off)* — a boss's centre-screen announcements,
+  when it is summoned, when it wakes and when it is defeated, are shown only to players near it.
+  Vanilla shows them to every player on the server, so anyone building at home gets a banner for
+  every boss fight anywhere in the world. Covers every vanilla boss, from Eikthyr's summoning to the
+  Queen, Fader and the Frozen King waking in their rooms, and any modded creature that announces
+  itself the same way.
+
+  The server decides who is near, from where each player last reported being, and delivers the
+  message through vanilla's own channel, so a player whose client lacks this mod still sees it when
+  they are in range. Distance is measured across the map and ignores height: dungeon interiors sit
+  far above their entrance, and a party waiting at the door should still see what happens inside.
+  Server-synced; a client on a server without this mod keeps vanilla behaviour.
+- **Boss Announcement Range** *(default 300 m)* — how close to the boss a player must be to see its
+  announcements. The default matches the Community Patch's **Boss Defeat Key Range**, so everyone
+  credited with a kill also sees it announced. 0 shows them to nobody. Server-synced.
+
 ### HUD & Notifications
 
 In native Valheim, Game.UpdateSaving broadcasts a 30-second autosave countdown warning ($msg_worldsavewarning 30s) with MessageHud.MessageType.Center. This displays a giant, screen-filling yellow banner directly across the player's crosshair and combat view. Many dedicated servers and administrative tools broadcast similar countdowns and save confirmations to the center of the screen as well.
