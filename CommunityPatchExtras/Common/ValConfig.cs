@@ -91,6 +91,7 @@ namespace CommunityPatchExtras {
             Patches.VehicleDeconstructPatch.BindConfig();
             Patches.HildirChestSalePatch.BindConfig();
             Patches.BossAnnouncementRangePatch.BindConfig();
+            Patches.HeatDistortionPatch.BindConfig();
 
         }
 

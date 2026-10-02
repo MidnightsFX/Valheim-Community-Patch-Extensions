@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.1
+
+- Summoned minions now stay tied to their summoner when told to stay or when commanding tamed creatures is turned off, so they keep counting toward the summon limit and are dismissed when their summoner is gone.
+- Adds an accessibility option to turn off the wavy heat effect in the Ashlands, which can make some players feel sick.
+
 ## 0.4.0
 
 - Boss summon, wake and defeat announcements now only reach players near the boss instead of the whole server.

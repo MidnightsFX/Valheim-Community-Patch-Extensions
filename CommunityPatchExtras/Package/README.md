@@ -112,12 +112,15 @@ gallery, the menu's Credits button, and the `cinematic` console command — are 
 
 - **Commandable Tames** *(default on, vanilla off for most creatures)* — lets you tell **any** tamed
   creature to follow or to stay, not just the few Valheim marked for it. Vanilla allows it for
-  wolves, lox and asksvins and for nothing else. Server-synced.
+  wolves, lox and asksvins and for nothing else. Summoned minions can be told to stay too, but a
+  waiting minion still counts toward its summoner's summon limit and is dismissed under the same
+  rules as one following them, such as when its summoner logs out. One you walk away from simply
+  waits where you left it, and counts again as soon as you are back. Server-synced.
 
 - **Commandable Tames Exceptions** *(default empty, advanced)* — prefab names to leave exactly as
   vanilla ships them, comma separated, for when you want commandable boars but not commandable hens
   (`Hen,Chicken`). Matched ignoring case; listed creatures keep petting, and any already following
-  someone is released. Server-synced.
+  someone is released, except summoned minions, which keep following their summoner. Server-synced.
 
 ### Building
 
@@ -186,6 +189,17 @@ During combat, boss encounters, sailing, or precise building, having the center 
   - Mute: Completely silences the center save notifications.
 
 Per-machine presentation setting: not synced from the server, and inert on dedicated servers where HUD messages are not rendered.
+
+### Accessibility
+
+- **Disable Heat Distortion** *(default off = vanilla)* — turns off the wavy full-screen heat effect
+  the Ashlands puts over your view when you stand near lava, wade in its sea, or walk under its
+  daytime sun. The moving image makes some players motion sick, and Valheim's own Accessibility
+  settings have no option for it. Only the screen effect goes: heat still builds up and burns you
+  exactly as in vanilla, and the heat particles and sound around your character still play, so you
+  can still tell when you are overheating.
+
+Per-machine: this only affects your own screen and is not synced from the server.
 
 ## Installation (manual)
 

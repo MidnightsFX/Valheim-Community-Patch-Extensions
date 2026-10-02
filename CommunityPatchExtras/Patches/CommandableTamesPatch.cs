@@ -49,6 +49,11 @@ namespace CommunityPatchExtras.Patches {
     // cleared - see Release, which also explains why the "stay" patrol point is deliberately left
     // alone. That runs over the loaded creatures the moment the setting changes, and at every Awake
     // afterwards, which is what reaches the ones that were nowhere near a player at the time.
+    // Summoned minions are the exception: following is how vanilla ties them to their summoner.
+    //
+    // SUMMONED MINIONS are tames too, so this makes them commandable as well. Telling one to stay
+    // clears the very key every summon limit reads; SummonLeashPatch keeps a parked summon counted
+    // and leashed to its summoner.
     //
     // SERVER-SYNCED, unlike the grass and cutscene settings. This one changes what the world does:
     // the command writes the ZDO keys "follow", "patrol" and "patrolPoint", which the server owns,
@@ -88,9 +93,12 @@ namespace CommunityPatchExtras.Patches {
                 "means herding it. On, interacting with any tamed creature toggles follow/stay for " +
                 "it exactly as it already does for a wolf; the trade is that those creatures can no " +
                 "longer be petted for the affection message, because that is the same key. Taming " +
-                "itself is unchanged, and wild creatures are unaffected. Turning this back off " +
-                "releases anything currently following. Server-synced: this changes saved world " +
-                "state, so the server's value is used for everyone.");
+                "itself is unchanged, and wild creatures are unaffected. Summoned minions can be told " +
+                "to stay too, but one waiting still counts toward its summoner's limit and is " +
+                "dismissed under the same rules as one following. Turning this back off releases " +
+                "anything currently following, except summoned minions, which keep following their " +
+                "summoner. Server-synced: this changes saved world state, so the server's value is " +
+                "used for everyone.");
 
             Exceptions = ValConfig.BindServerConfig(
                 "Tamed Creatures",
@@ -100,7 +108,8 @@ namespace CommunityPatchExtras.Patches {
                 "want commandable boars but not commandable hens - for example \"Hen,Chicken\". " +
                 "These are prefab names rather than display names, and are matched ignoring case. " +
                 "Creatures listed here keep petting and cannot be commanded, and any of them already " +
-                "following someone is released. Ignored entirely when Commandable Tames is off.",
+                "following someone is released, except summoned minions, which keep following their " +
+                "summoner. Ignored entirely when Commandable Tames is off.",
                 null,
                 true);
 
@@ -159,9 +168,16 @@ namespace CommunityPatchExtras.Patches {
         }
 
         // Hands a creature this feature no longer covers back its vanilla behaviour. A creature
-        // vanilla never lets you command should not be following anybody - vanilla cannot produce
-        // that state, only this feature can - and left in it the animal is a trap: Tameable re-issues
-        // the saved command every Update and Interact no longer offers a way to cancel it.
+        // vanilla never lets you command should not be following anybody - for an ordinary tame,
+        // vanilla cannot produce that state, only this feature can - and left in it the animal is a
+        // trap: Tameable re-issues the saved command every Update and Interact no longer offers a way
+        // to cancel it.
+        //
+        // Summoned minions are the one non-commandable creature vanilla does make follow: SpawnAbility
+        // commands each one to its summoner at spawn, and that saved follow is what the summon limit,
+        // the leash and the logout timer all hang off. Clearing it would set the summon loose for
+        // good, so a summon is never released - one parked under this feature stays leashed by
+        // SummonLeashPatch instead.
         //
         // The patrol point a "stay" leaves behind is deliberately NOT cleared, because that flag is
         // not ours to interpret: CreatureSpawner, SpawnArea, TriggerSpawner and OfferingBowl all set
@@ -173,6 +189,8 @@ namespace CommunityPatchExtras.Patches {
         // Update - so the machine that would otherwise keep the command alive is the one that clears
         // it. Returns whether anything was cleared.
         private static bool Release(Tameable tameable) {
+            if (SummonLeashPatch.IsSummon(tameable)) { return false; }
+
             ZNetView nview = tameable.m_nview;
             if (nview == null || !nview.IsValid() || !nview.IsOwner()) { return false; }
 
@@ -223,7 +241,8 @@ namespace CommunityPatchExtras.Patches {
         // m_monsterAI and the "Command" RPC, and nothing reads m_commandable until a player
         // interacts - so a postfix here is early enough for every instance and late enough to see
         // everything it needs. It runs on a dedicated server too, harmlessly: the server never calls
-        // Interact, but it does own most creatures' ZDOs, which is exactly where Release wants to be.
+        // Interact, and it owns only the creatures around its own reference position - each client
+        // owns those in its own area - so Release there acts on exactly what that server owns.
         [HarmonyPostfix]
         [HarmonyPatch(typeof(Tameable), "Awake")]
         private static void TameableAwakePostfix(Tameable __instance) {
