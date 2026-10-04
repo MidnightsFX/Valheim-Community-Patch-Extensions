@@ -92,6 +92,8 @@ namespace CommunityPatchExtras {
             Patches.HildirChestSalePatch.BindConfig();
             Patches.BossAnnouncementRangePatch.BindConfig();
             Patches.HeatDistortionPatch.BindConfig();
+            Patches.SharedSummonLimitPatch.BindConfig();
+            Patches.UpgradableWisplightPatch.BindConfig();
 
         }
 

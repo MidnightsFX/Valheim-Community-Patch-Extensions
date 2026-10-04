@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.2
+- The Spirit Caller's different spirits now share one summon limit instead of each kind getting its own, which admins can turn off.
+- Optional configuration which allows upgrading the Wisplight to increase mist dispersing distance (default off, configurable)
+
 ## 0.4.1
 
 - Summoned minions now stay tied to their summoner when told to stay or when commanding tamed creatures is turned off, so they keep counting toward the summon limit and are dismissed when their summoner is gone.

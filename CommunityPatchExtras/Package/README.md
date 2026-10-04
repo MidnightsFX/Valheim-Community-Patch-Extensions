@@ -122,6 +122,14 @@ gallery, the menu's Credits button, and the `cinematic` console command — are 
   (`Hen,Chicken`). Matched ignoring case; listed creatures keep petting, and any already following
   someone is released, except summoned minions, which keep following their summoner. Server-synced.
 
+- **Shared Summon Limit** *(default on, vanilla off)* — a staff that summons more than one kind of
+  creature counts them all toward its one summon limit. Vanilla counts each kind separately, so the
+  Spirit Caller, which calls a random wolf, boar, moose or bear, lets you keep a full limit of
+  *each* — four times what the staff allows — while the Dead Raiser, which only raises skeletons,
+  stops where it should. On, the oldest summon is dismissed first, exactly as vanilla does for
+  skeletons. Modded staffs that summon several creatures are covered too. Server-synced; held at
+  vanilla on a server without this mod.
+
 ### Building
 
 - **Deconstruct Boats And Carts** *(default on, vanilla off)* — the hammer's remove click works on
@@ -136,6 +144,23 @@ gallery, the menu's Credits button, and the `cinematic` console command — are 
   zones, and a **workbench in range**, which every vehicle lists as its crafting station, the Raft
   included. So a boat moored away from base needs a workbench nearby. Server-synced; a client on a
   server without this mod keeps vanilla behaviour.
+
+### Equipment
+
+- **Upgradable Wisplight** *(default off = vanilla)* — the Wisplight can be upgraded at the
+  workbench, up to level 4, and each level pushes the mist back further. Each upgrade costs three
+  times the Wisplight's crafting materials per level, scaled by level the way every upgrade in the
+  game is: 3, then 6, then 12 each of Silver and Wisps, at workbench levels 2, 3 and 4. Upgrading
+  unequips it, as it does any item, so put it back on to get the new reach.
+
+  Stacks with anything else that widens the Wisplight's reach, such as Epic Loot's Demisting
+  enchantment: the two multiply. Other players see the mist cleared as far as you do, and, as with
+  any Wisplight, creatures can see you through the cleared mist too. Turning this off leaves
+  upgraded Wisplights at their level but back at vanilla reach. Server-synced; a client on a server
+  without this mod keeps vanilla behaviour.
+- **Wisplight Range Per Level** *(default 30%)* — how much further each upgrade pushes the mist
+  back, as a share of the Wisplight's reach before upgrading: at 30%, levels 2, 3 and 4 clear 30%,
+  60% and 90% further. Takes effect the next time the Wisplight is equipped. Server-synced.
 
 ### Traders
 
