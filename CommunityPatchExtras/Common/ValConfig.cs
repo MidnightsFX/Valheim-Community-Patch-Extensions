@@ -94,6 +94,7 @@ namespace CommunityPatchExtras {
             Patches.HeatDistortionPatch.BindConfig();
             Patches.SharedSummonLimitPatch.BindConfig();
             Patches.UpgradableWisplightPatch.BindConfig();
+            Patches.ShoreWaveHeightPatch.BindConfig();
 
         }
 

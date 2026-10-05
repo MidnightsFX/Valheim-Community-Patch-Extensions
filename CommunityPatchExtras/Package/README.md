@@ -162,6 +162,21 @@ gallery, the menu's Credits button, and the `cinematic` console command — are 
   back, as a share of the Wisplight's reach before upgrading: at 30%, levels 2, 3 and 4 clear 30%,
   60% and 90% further. Takes effect the next time the Wisplight is equipped. Server-synced.
 
+### Water
+
+- **Shore Wave Height** *(default 0.6, vanilla 1)* — how tall waves are over shallow water near
+  shore, compared with vanilla. Lower values calm the waves more the closer the water is to the
+  beach, while water about 10 m deep or more keeps its full waves, so the open sea is unchanged.
+  The default of 0.6 is a slight reduction: about a third lower in 1 m of water, a fifth lower in
+  5 m, and a tenth lower in 7.5 m. Set it to 1 for vanilla waves.
+
+  The physics and the drawn sea are lowered together, so boats, swimmers, floating items and fish
+  ride exactly the waves you see, and a boat in the shallows pitches less and takes fewer
+  wave-impact hits in a storm. Shallow water also looks a little sandier and calmer at lower
+  values, because the game uses the same depth for its water color and foam; the Community
+  Patch's **Water Color Shore Tint** hides most of the color change. Changes apply live to the water already loaded.
+  Server-synced; a client on a server without this mod keeps vanilla waves.
+
 ### Traders
 
 - **Hildir Buys Spare Chests** *(default on, vanilla off)* — Hildir will buy extra copies of her

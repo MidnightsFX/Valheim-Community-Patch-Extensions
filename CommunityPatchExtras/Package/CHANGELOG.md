@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.0
+- Waves near the shore are now slightly lower (configurable), server synced.
+
 ## 0.4.2
 - The Spirit Caller's different spirits now share one summon limit instead of each kind getting its own, which admins can turn off.
 - Optional configuration which allows upgrading the Wisplight to increase mist dispersing distance (default off, configurable)
