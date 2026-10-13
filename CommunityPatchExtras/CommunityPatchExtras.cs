@@ -24,7 +24,7 @@ namespace CommunityPatchExtras
     {
         public const string PluginGUID = "MidnightsFX.ValheimCommunityPatchExtras";
         public const string PluginName = "ValheimCommunityPatchExtras";
-        public const string PluginVersion = "0.5.0";
+        public const string PluginVersion = "0.5.1";
 
         internal static ManualLogSource Log;
         internal ValConfig cfg;

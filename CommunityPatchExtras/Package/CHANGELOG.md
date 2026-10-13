@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.1
+- Hitting a bird now trains the skill of the weapon used, as hitting a creature does, which admins can turn off.
+- Smelters, kilns, refineries and similar stations can now be filled from your inventory with a single key press.
+
 ## 0.5.0
 - Waves near the shore are now slightly lower (configurable), server synced.
 

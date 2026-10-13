@@ -95,6 +95,8 @@ namespace CommunityPatchExtras {
             Patches.SharedSummonLimitPatch.BindConfig();
             Patches.UpgradableWisplightPatch.BindConfig();
             Patches.ShoreWaveHeightPatch.BindConfig();
+            Patches.BirdHitSkillPatch.BindConfig();
+            Patches.StationAddAllPatch.BindConfig();
 
         }
 
@@ -148,6 +150,22 @@ namespace CommunityPatchExtras {
         /// <param name="description">Shown in the config file and the Configuration Manager.</param>
         /// <param name="advanced">Hides the entry behind the Advanced toggle.</param>
         public static ConfigEntry<bool> BindClientConfig(string category, string key, bool value, string description, bool advanced = false) {
+            return cfg.Bind(category, key, value,
+                new ConfigDescription(description,
+                null,
+                new ConfigurationManagerAttributes { IsAdvanced = advanced })
+                );
+        }
+
+        /// <summary>
+        /// Binds a per-machine key combination.
+        /// </summary>
+        /// <param name="category">Config file section.</param>
+        /// <param name="key">Entry name within the section.</param>
+        /// <param name="value">Default value.</param>
+        /// <param name="description">Shown in the config file and the Configuration Manager.</param>
+        /// <param name="advanced">Hides the entry behind the Advanced toggle.</param>
+        public static ConfigEntry<KeyboardShortcut> BindClientConfig(string category, string key, KeyboardShortcut value, string description, bool advanced = false) {
             return cfg.Bind(category, key, value,
                 new ConfigDescription(description,
                 null,

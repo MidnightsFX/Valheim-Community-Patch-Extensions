@@ -145,6 +145,24 @@ gallery, the menu's Credits button, and the `cinematic` console command — are 
   included. So a boat moored away from base needs a workbench nearby. Server-synced; a client on a
   server without this mod keeps vanilla behaviour.
 
+### Stations
+
+- **Add All To Stations** *(default on, vanilla off)* — fills a smelter, blast furnace, charcoal
+  kiln, eitr refinery, spinning wheel, windmill or similar station from your inventory in one key
+  press, where vanilla adds one item per press of use. Look at the input you want filled, the ore
+  slot or the fuel slot, and press the shortcut: it adds as much as fits. Only the input you are
+  looking at is filled, so topping up coal never pours your ore in as well. Fireplaces, cooking
+  stations and fermenters are not covered.
+
+  Items go in through the game's own feeding code one at a time, so everything vanilla checks on a
+  press still applies, and the server sees nothing it would not see from that many presses of use.
+  That makes it safe on any server, with or without this mod.
+- **Add All Shortcut** *(default Left Shift + E)* — the key combination that fills the input you are
+  looking at. While it is held, use no longer adds single items to a station, so the press is not
+  counted twice. Keyboard only.
+
+Per-machine: these are your own controls and are not synced from the server.
+
 ### Equipment
 
 - **Upgradable Wisplight** *(default off = vanilla)* — the Wisplight can be upgraded at the
@@ -161,6 +179,18 @@ gallery, the menu's Credits button, and the `cinematic` console command — are 
 - **Wisplight Range Per Level** *(default 30%)* — how much further each upgrade pushes the mist
   back, as a share of the Wisplight's reach before upgrading: at 30%, levels 2, 3 and 4 clear 30%,
   60% and 90% further. Takes effect the next time the Wisplight is equipped. Server-synced.
+
+### Skills
+
+- **Bird Hits Raise Skills** *(default on, vanilla off)* — hitting a bird raises the skill of the
+  weapon you hit it with, as hitting a creature does. Vanilla gives nothing for it: crows, gulls and
+  the Ashlands' ash crows are not creatures to the game, so an arrow through a gull is worth no
+  more than one into a tree. Covers every weapon that trains a skill on creatures, from swords and
+  bows to thrown spears and staffs, modded ones included.
+
+  A bird counts as one ordinary hit, not the slightly larger amount a melee hit on a creature gives,
+  and a swing or blast that hits several birds at once counts once, as it does for a pack of
+  creatures. Server-synced; a client on a server without this mod keeps vanilla behaviour.
 
 ### Water
 
