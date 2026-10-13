@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
 using BepInEx.Configuration;
@@ -39,6 +40,13 @@ namespace CommunityPatchExtras.Patches {
     // "it's full" message) after the fill. Read through ZInput, the game's own input layer. Keyboard
     // only; gamepad controls are unchanged.
     //
+    // THE HOVER LINE. Each input's hover text gets a line under vanilla's own, in vanilla's format:
+    // "[LeftShift + E] Add 10 Coal". The count is what a press would add right now, worked out the way
+    // the fill picks items (conversion order, world level, room left), so it moves as the station
+    // fills and as the inventory changes. The line is left off whenever pressing the key would do
+    // nothing: the feature turned off, no key set, a gamepad in use, or nothing that would go in.
+    // "Add" is vanilla's $piece_smelter_add, the word its fuel line already uses, so it is translated.
+    //
     // Client config: this is one player's controls. Nothing reaches the network that pressing the
     // use key the same number of times would not send, so it works on any server, modded or not.
     [HarmonyPatch]
@@ -46,9 +54,14 @@ namespace CommunityPatchExtras.Patches {
         internal static ConfigEntry<bool> Enabled;
         internal static ConfigEntry<KeyboardShortcut> Shortcut;
 
-        // Item names and counts for the closing message, in the order they went in.
-        private static readonly List<KeyValuePair<string, int>> Added = new List<KeyValuePair<string, int>>();
-        private static readonly StringBuilder Message = new StringBuilder();
+        // Item names and counts, in the order they go in: what a fill added, for its closing message,
+        // or what a press would add, for the hover line. Filled and read within one call of either.
+        private static readonly List<KeyValuePair<string, int>> Counts = new List<KeyValuePair<string, int>>();
+        private static readonly StringBuilder Text = new StringBuilder();
+
+        // The shortcut as the hover line shows it. Rebuilt only when the setting changes, since the
+        // hover text is asked for every frame the crosshair is on a station.
+        private static string _shortcutText;
 
         internal static void BindConfig() {
             Enabled = ValConfig.BindClientConfig(
@@ -58,7 +71,8 @@ namespace CommunityPatchExtras.Patches {
                 "Whether the Add All Shortcut fills a smelter, kiln, refinery, spinning wheel, windmill " +
                 "or similar station from your inventory in one press. Look at the input you want filled, " +
                 "the ore slot or the fuel slot, and press the shortcut; it adds as much as fits, as if you " +
-                "had pressed use that many times. Per-machine; works on any server.");
+                "had pressed use that many times. The station's hover text shows the shortcut and how " +
+                "much it would add. Per-machine; works on any server.");
 
             Shortcut = ValConfig.BindClientConfig(
                 "Stations",
@@ -66,6 +80,11 @@ namespace CommunityPatchExtras.Patches {
                 new KeyboardShortcut(KeyCode.E, KeyCode.LeftShift),
                 "The key combination that fills the station input you are looking at. While it is held, " +
                 "the use key no longer adds single items to station inputs, so the press is not counted twice.");
+            Shortcut.SettingChanged += OnShortcutChanged;
+        }
+
+        private static void OnShortcutChanged(object sender, EventArgs e) {
+            _shortcutText = null;
         }
 
         private static bool ShortcutActive(bool pressedThisFrame) {
@@ -81,6 +100,21 @@ namespace CommunityPatchExtras.Patches {
                 if (!ZInput.GetKey(modifier, logWarning: false)) { return false; }
             }
             return true;
+        }
+
+        // Modifiers first, as the keys are pressed. KeyboardShortcut.ToString puts the main key first.
+        private static string ShortcutText() {
+            if (_shortcutText != null) { return _shortcutText; }
+
+            KeyboardShortcut shortcut = Shortcut.Value;
+            StringBuilder text = new StringBuilder();
+            foreach (KeyCode modifier in shortcut.Modifiers) {
+                text.Append(modifier).Append(" + ");
+            }
+            text.Append(shortcut.MainKey);
+
+            _shortcutText = text.ToString();
+            return _shortcutText;
         }
 
         // A station's ore or fuel input. A placement ghost has the switches but never wired them up
@@ -99,6 +133,16 @@ namespace CommunityPatchExtras.Patches {
                 return true;
             }
             return false;
+        }
+
+        private static int OreRoom(Smelter smelter) {
+            return smelter.m_maxOre - smelter.GetQueueSize();
+        }
+
+        // Smelter.OnAddFuel calls a station full once its fuel is above max - 1, so the room is the
+        // whole units that fit below max: floor(max - fuel) is zero exactly when vanilla says full.
+        private static int FuelRoom(Smelter smelter) {
+            return Mathf.FloorToInt(smelter.m_maxFuel - smelter.GetFuel());
         }
 
         // Runs for every Player every frame, so the cheap rejections come first: with the shortcut not
@@ -139,8 +183,8 @@ namespace CommunityPatchExtras.Patches {
         // inventory runs out, and the closing message replaces vanilla's per-item one.
         private static int AddAllOre(Player player, Switch sw, Smelter smelter) {
             Inventory inventory = player.GetInventory();
-            int room = smelter.m_maxOre - smelter.GetQueueSize();
-            Added.Clear();
+            int room = OreRoom(smelter);
+            Counts.Clear();
 
             int total = 0;
             do {
@@ -159,13 +203,11 @@ namespace CommunityPatchExtras.Patches {
             return total;
         }
 
-        // Smelter.OnAddFuel calls a station full once its fuel is above max - 1, so the room is the
-        // whole units that fit below max: floor(max - fuel) is zero exactly when vanilla says full.
         private static int AddAllFuel(Player player, Switch sw, Smelter smelter) {
             Inventory inventory = player.GetInventory();
             string name = smelter.m_fuelItem.m_itemData.m_shared.m_name;
-            int room = Mathf.FloorToInt(smelter.m_maxFuel - smelter.GetFuel());
-            Added.Clear();
+            int room = FuelRoom(smelter);
+            Counts.Clear();
 
             int total = 0;
             do {
@@ -181,11 +223,26 @@ namespace CommunityPatchExtras.Patches {
         }
 
         private static void Count(string name) {
-            int last = Added.Count - 1;
-            if (last >= 0 && Added[last].Key == name) {
-                Added[last] = new KeyValuePair<string, int>(name, Added[last].Value + 1);
+            int last = Counts.Count - 1;
+            if (last >= 0 && Counts[last].Key == name) {
+                Counts[last] = new KeyValuePair<string, int>(name, Counts[last].Value + 1);
             } else {
-                Added.Add(new KeyValuePair<string, int>(name, 1));
+                Counts.Add(new KeyValuePair<string, int>(name, 1));
+            }
+        }
+
+        private static bool Counted(string name) {
+            for (int i = 0; i < Counts.Count; i++) {
+                if (Counts[i].Key == name) { return true; }
+            }
+            return false;
+        }
+
+        // "7 $item_copperore, 3 $item_tinore"
+        private static void AppendCounts() {
+            for (int i = 0; i < Counts.Count; i++) {
+                if (i > 0) { Text.Append(", "); }
+                Text.Append(Counts[i].Value).Append(' ').Append(Counts[i].Key);
             }
         }
 
@@ -193,13 +250,73 @@ namespace CommunityPatchExtras.Patches {
         private static void ShowAdded(Player player, int total) {
             if (total == 0) { return; }
 
-            Message.Clear();
-            Message.Append("$msg_added ");
-            for (int i = 0; i < Added.Count; i++) {
-                if (i > 0) { Message.Append(", "); }
-                Message.Append(Added[i].Value).Append(' ').Append(Added[i].Key);
+            Text.Clear();
+            Text.Append("$msg_added ");
+            AppendCounts();
+            player.Message(MessageHud.MessageType.Center, Text.ToString());
+        }
+
+        // Whether a press could do anything from this machine, before counting what it would add.
+        private static bool HintPlayer(out Player player) {
+            player = null;
+            if (Enabled == null || !Enabled.Value || Shortcut.Value.MainKey == KeyCode.None) { return false; }
+            if (ZInput.IsGamepadActive()) { return false; }
+
+            player = Player.m_localPlayer;
+            return player != null;
+        }
+
+        // What AddAllOre would add: FindCookableItem takes the first conversion whose item is in the
+        // inventory until it runs out, then the next. CountItems applies the same world-level filter
+        // GetItem does. A source listed twice is counted once.
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(Smelter), "OnHoverAddOre")]
+        private static void OnHoverAddOrePostfix(Smelter __instance, ref string __result) {
+            if (!HintPlayer(out Player player)) { return; }
+
+            Inventory inventory = player.GetInventory();
+            int room = OreRoom(__instance);
+            Counts.Clear();
+
+            foreach (Smelter.ItemConversion conversion in __instance.m_conversion) {
+                if (room <= 0) { break; }
+                if (conversion.m_from == null) { continue; }
+
+                string name = conversion.m_from.m_itemData.m_shared.m_name;
+                if (Counted(name)) { continue; }
+
+                int amount = Mathf.Min(inventory.CountItems(name), room);
+                if (amount <= 0) { continue; }
+
+                Counts.Add(new KeyValuePair<string, int>(name, amount));
+                room -= amount;
             }
-            player.Message(MessageHud.MessageType.Center, Message.ToString());
+
+            AppendHint(ref __result);
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(Smelter), "OnHoverAddFuel")]
+        private static void OnHoverAddFuelPostfix(Smelter __instance, ref string __result) {
+            if (!HintPlayer(out Player player) || __instance.m_fuelItem == null) { return; }
+
+            string name = __instance.m_fuelItem.m_itemData.m_shared.m_name;
+            int amount = Mathf.Min(player.GetInventory().CountItems(name), FuelRoom(__instance));
+            Counts.Clear();
+            if (amount > 0) { Counts.Add(new KeyValuePair<string, int>(name, amount)); }
+
+            AppendHint(ref __result);
+        }
+
+        // Vanilla's hover methods return their text already localized, so the line is localized on
+        // its own before it is appended.
+        private static void AppendHint(ref string hoverText) {
+            if (Counts.Count == 0) { return; }
+
+            Text.Clear();
+            Text.Append("\n[<color=yellow><b>").Append(ShortcutText()).Append("</b></color>] $piece_smelter_add ");
+            AppendCounts();
+            hoverText += Localization.instance.Localize(Text.ToString());
         }
     }
 }

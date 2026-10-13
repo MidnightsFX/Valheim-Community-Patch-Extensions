@@ -154,6 +154,11 @@ gallery, the menu's Credits button, and the `cinematic` console command — are 
   looking at is filled, so topping up coal never pours your ore in as well. Fireplaces, cooking
   stations and fermenters are not covered.
 
+  Each input's hover text shows the shortcut and what it would add right now, under vanilla's own
+  line: `[LeftShift + E] Add 10 Coal`, or `Add 7 Copper ore, 3 Tin ore` for mixed ores. The line is
+  hidden when the setting is off, when a gamepad is in use, and when there is nothing to add because
+  the input is full or you carry nothing it takes.
+
   Items go in through the game's own feeding code one at a time, so everything vanilla checks on a
   press still applies, and the server sees nothing it would not see from that many presses of use.
   That makes it safe on any server, with or without this mod.
