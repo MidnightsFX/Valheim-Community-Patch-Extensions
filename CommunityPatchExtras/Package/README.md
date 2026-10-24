@@ -145,6 +145,10 @@ gallery, the menu's Credits button, and the `cinematic` console command — are 
   included. So a boat moored away from base needs a workbench nearby. Server-synced; a client on a
   server without this mod keeps vanilla behaviour.
 
+### Portals
+
+- **Extend Portal Tag Limit** *(default on)* - Extends the portal tag character limit from 10 to 40 characters. Server-synced.
+
 ### Stations
 
 - **Add All To Stations** *(default on, vanilla off)* — fills a smelter, blast furnace, charcoal
