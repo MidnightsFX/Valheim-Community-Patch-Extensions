@@ -284,3 +284,9 @@ and Jotunn. Install on the server and all clients; versions are checked on conne
 ## Known issues
 
 None yet. Report at https://github.com/MidnightsFX/Valheim-Community-Patch-Extensions
+
+---
+
+If you enjoy my mods donations are appreciated. My mods will never be paid and donations are not required.
+
+<a href="https://ko-fi.com/midnightsfx"><img height="36" src="https://storage.ko-fi.com/cdn/kofi2.png?v=3" alt="Support me on Ko-fi"></a>
