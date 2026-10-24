@@ -147,7 +147,9 @@ gallery, the menu's Credits button, and the `cinematic` console command — are 
 
 ### Portals
 
-- **Extend Portal Tag Limit** *(default on)* - Extends the portal tag character limit from 10 to 40 characters. Server-synced.
+- **Extend Portal Tag Limit** *(default on, vanilla off)* — raises the longest tag you can give a
+  portal from 10 characters to 40. Server-synced; a client on a server without this mod keeps
+  vanilla behaviour.
 
 ### Stations
 

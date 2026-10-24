@@ -1,7 +1,7 @@
 # Changelog
 
 ## 0.5.2
-- The portal tag character limit can now be extended from 10 to 40 characters (default on, server-synced).
+- Portal tags can now be longer, which admins can turn off.
 
 ## 0.5.1
 - Hitting a bird now trains the skill of the weapon used, as hitting a creature does, which admins can turn off.

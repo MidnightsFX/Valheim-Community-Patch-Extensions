@@ -27,7 +27,8 @@ namespace CommunityPatchExtras.Patches {
                 "Portals",
                 "Extend Portal Tag Limit",
                 true,
-                "Extends portal tag character limit from 10 to 40 characters. Server-synced.");
+                "Whether the tag you give a portal can be up to 40 characters long instead of vanilla's 10. " +
+                "Server-synced; a client on a server without this mod keeps vanilla behaviour.");
 
             SynchronizationManager.OnConfigurationSynchronized += OnConfigurationSynchronized;
         }
