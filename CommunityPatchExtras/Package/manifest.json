@@ -4,9 +4,9 @@
   "version_number": "0.5.2",
   "website_url": "https://github.com/MidnightsFX/Valheim-Community-Patch-Extensions",
   "dependencies": [
-    "denikson-BepInExPack_Valheim-5.4.2350",
-    "ValheimModding-Jotunn-2.30.0",
+    "denikson-BepInExPack_Valheim-5.4.2351",
+    "ValheimModding-Jotunn-2.30.2",
     "ValheimModding-YamlDotNet-16.3.1",
-    "MidnightMods-ValheimCommunityPatch-0.32.4"
+    "MidnightMods-ValheimCommunityPatch-0.38.0"
   ]
 }
