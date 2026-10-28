@@ -44,8 +44,10 @@ namespace CommunityPatchExtras.Patches {
     //     two fade distances are scaled by the same factor as the distance, which vanilla's own clamp then
     //     caps at the generated radius for free. Scaling both keeps the near-field density profile the
     //     game shipped instead of stretching it thin. The prefabs are shared assets that we write to, so
-    //     the shipped values are captured exactly once per process and restored when the setting goes back
-    //     to vanilla.
+    //     each one's shipped values are captured the first time it is seen and put back whenever the
+    //     distance returns to vanilla - including at every ClutterSystem Awake. A new scene's system starts
+    //     at its own distance, and the main menu's would otherwise inherit the last world's stretched fades:
+    //     the clamp above then caps a clone's max below its min and no blade within it is drawn at all.
     //
     //  2. FILL RATE. GeneratePatch builds at most one new patch per frame (the ref bool generated gate at
     //     ClutterSystem.cs:262) - at 40 m that fills ~79 patches in ~1.3 s, but the count grows with the
@@ -81,7 +83,8 @@ namespace CommunityPatchExtras.Patches {
     //    and relies on the same rebuildAll that is forced off. A hoe touches a handful of patches and the
     //    budget is per frame, so this is imperceptible at any budget above 1.
     //  - Untouched outside a world. ResolveDistance returns the shipped value whenever ZoneSystem.instance
-    //    is null, which leaves the main menu's background ClutterSystem exactly as vanilla drew it.
+    //    is null, and Awake puts the prefab fades back, which leaves the main menu's background
+    //    ClutterSystem exactly as vanilla drew it.
     [HarmonyPatch(typeof(ClutterSystem))]
     internal static class GrassDistancePatch {
         internal static ConfigEntry<float> Distance;
@@ -93,11 +96,14 @@ namespace CommunityPatchExtras.Patches {
         private static float _vanillaDistance;
         private static bool _vanillaCaptured;
 
-        // The clutter prefabs' shipped fade distances. Captured exactly once per process, unlike the
-        // distance above: prefabs are shared assets that survive scene loads, and we write to them, so
-        // re-capturing at a second Awake would record our own scaled values as the vanilla ones.
+        // The clutter prefabs' shipped fade distances, captured the first time each prefab is seen and
+        // never again: prefabs are shared assets that survive scene loads, and we write to them, so
+        // re-reading a known one at a later Awake would record our own scaled values as the vanilla ones.
+        // A prefab seen for the first time has never been written, so its live values are the shipped
+        // ones. The menu's clutter list is not the world's (it lacks small rock1), so capturing once per
+        // process would leave such a prefab unstretched in game.
         private static readonly List<ClutterLod> Lods = new List<ClutterLod>();
-        private static bool _lodsCaptured;
+        private static readonly HashSet<InstanceRenderer> Captured = new HashSet<InstanceRenderer>();
         private static bool _lodsScaled;
 
         // New patches still allowed this frame beyond vanilla's first. Reset per GeneratePatches pass.
@@ -184,9 +190,6 @@ namespace CommunityPatchExtras.Patches {
         }
 
         private static void CaptureLods(ClutterSystem clutter) {
-            if (_lodsCaptured) { return; }
-            _lodsCaptured = true;
-
             foreach (ClutterSystem.Clutter entry in clutter.m_clutter) {
                 // Only instanced clutter fades: the other kind is instantiated as one real GameObject per
                 // blade and left to Unity's own culling, and ClutterSystem.cs:338 is inside the instanced
@@ -195,7 +198,7 @@ namespace CommunityPatchExtras.Patches {
 
                 // Vanilla reads the component off the root too, unguarded, in that same branch.
                 InstanceRenderer renderer = entry.m_prefab.GetComponent<InstanceRenderer>();
-                if (renderer == null) { continue; }
+                if (renderer == null || !Captured.Add(renderer)) { continue; }
 
                 Lods.Add(new ClutterLod {
                     Renderer = renderer,
@@ -236,6 +239,12 @@ namespace CommunityPatchExtras.Patches {
             _vanillaDistance = __instance.m_distance;
             _vanillaCaptured = true;
             CaptureLods(__instance);
+
+            // This system starts at its scene's distance, so the shared prefabs must match it. A world's
+            // stretched fades left on them would be clamped by GenerateVegPatch to a max below their min,
+            // and LerpStep then thins every clone inside the radius to zero: the main menu losing its grass
+            // after a logout. Once a world is up, UpdateGrass re-stretches them on its first pass.
+            ApplyLodScale(__instance.m_distance);
         }
 
         // Runs once per grass update, which is where the radius is kept honest. Polling rather than

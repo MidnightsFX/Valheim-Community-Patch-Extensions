@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.3
+- Updated for Valheim 1.0.21
+- The main menu's grass no longer disappears after leaving a world.
+
 ## 0.5.2
 - Portal tags can now be longer, which admins can turn off.
 
