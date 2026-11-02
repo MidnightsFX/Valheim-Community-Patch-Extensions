@@ -43,7 +43,8 @@ namespace CommunityPatchExtras {
             PatchTabCompletion(nameof(Terminal.updateSearch));
 
             TerminalNetwork.Init();
-            RegisterCommands();
+            RegisterHelpCommand();
+            RegisterCreationCommands();
 
             Logger.LogDebug($"Registered {Registry.Count} console commands.");
         }

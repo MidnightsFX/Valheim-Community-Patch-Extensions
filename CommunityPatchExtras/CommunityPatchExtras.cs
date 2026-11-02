@@ -16,15 +16,19 @@ namespace CommunityPatchExtras
     // VersionCheckOnly like the Community Patch itself: every feature here is guarded to be safe
     // one-sided (see each patch's header), but when both sides do have the mod, mismatched
     // versions should be refused up front rather than debugged later.
+    //
+    // Soft dependency on WardIsLove only so it loads first: VehicleDeconstructPatch looks up its
+    // RemovePiece prefix while this mod patches.
     [BepInPlugin(PluginGUID, PluginName, PluginVersion)]
     [BepInDependency(Jotunn.Main.ModGuid)]
     [BepInDependency("MidnightsFX.ValheimCommunityPatch", BepInDependency.DependencyFlags.HardDependency)]
+    [BepInDependency(Patches.VehicleDeconstructPatch.WardIsLoveGuid, BepInDependency.DependencyFlags.SoftDependency)]
     [NetworkCompatibility(CompatibilityLevel.VersionCheckOnly, VersionStrictness.Minor)]
     internal class CommunityPatchExtras : BaseUnityPlugin
     {
         public const string PluginGUID = "MidnightsFX.ValheimCommunityPatchExtras";
         public const string PluginName = "ValheimCommunityPatchExtras";
-        public const string PluginVersion = "0.5.3";
+        public const string PluginVersion = "0.5.4";
 
         internal static ManualLogSource Log;
         internal ValConfig cfg;

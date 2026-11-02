@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.4
+- Adds an optional tracker that counts which objects are created the most, to help find something spawning far more than it should.
+- The hammer can now remove boats and carts when WardIsLove is installed.
+
 ## 0.5.3
 - Updated for Valheim 1.0.21
 - The main menu's grass no longer disappears after leaving a world.

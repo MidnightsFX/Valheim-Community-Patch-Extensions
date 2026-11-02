@@ -142,7 +142,8 @@ gallery, the menu's Credits button, and the `cinematic` console command — are 
   cart, or standing anywhere on the boat, not just at the helm. Anything in the vehicle's hold drops
   in a floating crate, as when it breaks. Otherwise the usual removal rules apply: wards, no-build
   zones, and a **workbench in range**, which every vehicle lists as its crafting station, the Raft
-  included. So a boat moored away from base needs a workbench nearby. Server-synced; a client on a
+  included. So a boat moored away from base needs a workbench nearby. Also works alongside
+  WardIsLove, whose wards protect vehicles like any other piece. Server-synced; a client on a
   server without this mod keeps vanilla behaviour.
 
 ### Portals
@@ -281,6 +282,29 @@ Per-machine presentation setting: not synced from the server, and inert on dedic
   can still tell when you are overheating.
 
 Per-machine: this only affects your own screen and is not synced from the server.
+
+### Diagnostics
+
+- **Track Object Creation** *(default off, advanced)* — counts the networked objects created on
+  this machine, per prefab, for finding something that spawns far more than it should: a spawner
+  gone wrong, a mod dropping items, an object torn down and rebuilt every frame. Each prefab gets
+  three counts:
+  - **new** — objects this machine brought into the world: drops, projectiles, spawned creatures,
+    placed pieces, the contents of newly generated zones.
+  - **loaded** — existing objects built as they came into range. Normal while you move; a prefab
+    climbing here while you stand still is being rebuilt in a loop.
+  - **from players** — server only: new objects a player's game created and sent in. On a
+    dedicated server this is most of what it sees, since it only builds objects around its own
+    reference point.
+
+  Read the counts with the `jms-creations` console command, or `jms-creations-server` from an
+  admin client for the server's. Both take, in any order, a column to sort by (`total`, `new`,
+  `loaded` or `players`), how many prefabs to list (default 20, or `all`), and `reset` to start
+  over. Turning the tracker on starts a fresh count, and rates are per minute since the first
+  object counted. Effects and anything else that never reaches the network are not counted.
+
+Per-machine: each machine counts only what it creates and has its own setting. A dedicated
+server's is set in its config file, which it picks up while running.
 
 ## Installation (manual)
 

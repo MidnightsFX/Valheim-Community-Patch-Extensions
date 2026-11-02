@@ -98,6 +98,7 @@ namespace CommunityPatchExtras {
             Patches.BirdHitSkillPatch.BindConfig();
             Patches.StationAddAllPatch.BindConfig();
             Patches.PortalTagLengthPatch.BindConfig();
+            Patches.CreationTrackerPatch.BindConfig();
         }
 
         // The per-machine counterpart to BindServerConfig below: same shape, but NOT IsAdminOnly, so

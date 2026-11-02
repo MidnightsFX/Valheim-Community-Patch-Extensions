@@ -1,6 +1,9 @@
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
+using BepInEx;
+using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using HarmonyLib;
 using Jotunn.Managers;
@@ -53,8 +56,17 @@ namespace CommunityPatchExtras.Patches {
     // a server whose admin never opted in. Uses the same per-session confirmation as
     // ZoneLoadRadiusPatch: this process is the server, or Jotunn has delivered this mod's config for
     // the current session.
+    //
+    // WARDISLOVE REPEATS THE FLAG CHECK. Its prefix on Player.RemovePiece (the same in 3.6.0, 3.7.2 and
+    // 4.0.9) reads m_canBeRemoved for itself and skips the game's method when it is false, so the
+    // transpiler below never gets to run and nothing is logged. That happens with no ward anywhere
+    // near, whenever its WardEnabled setting is on, which is the default. WardIsLovePrefixPatch makes
+    // the same swap inside that prefix and leaves its ward checks alone, so a WardIsLove ward still
+    // protects a vehicle.
     [HarmonyPatch]
     internal static class VehicleDeconstructPatch {
+        internal const string WardIsLoveGuid = "Azumatt.WardIsLove";
+
         internal static ConfigEntry<bool> Enabled;
 
         // The ZNet instance whose session Jotunn confirmed this mod's config for. Identity-compared so
@@ -180,6 +192,78 @@ namespace CommunityPatchExtras.Patches {
                 $"Piece.CanBeRemoved, found {flagReads} and {checks}, so Deconstruct Boats And Carts " +
                 "is inactive. A Valheim update or another mod has most likely changed the method.");
             return instructions;
+        }
+
+        // The prefix is private to an optional mod, so it can only be looked up by name, and only once
+        // that mod has loaded, which the soft dependency on it guarantees. Harmony calls the prefix as
+        // an ordinary method, so patching it works whichever mod applied its patches first. Prepare
+        // skips this class on an install without WardIsLove.
+        [HarmonyPatch]
+        private static class WardIsLovePrefixPatch {
+            private const string PrefixClass = "WardIsLove.PatchClasses.Ward+OverlapCheck";
+            private const string PrefixMethod = "PrefixRemovePiece";
+
+            private static MethodInfo _prefix;
+
+            [HarmonyPrepare]
+            private static bool Prepare() {
+                if (!Chainloader.PluginInfos.TryGetValue(WardIsLoveGuid, out PluginInfo wardIsLove) || wardIsLove.Instance == null) { return false; }
+
+                Type prefixClass = wardIsLove.Instance.GetType().Assembly.GetType(PrefixClass);
+                _prefix = prefixClass == null ? null : AccessTools.DeclaredMethod(prefixClass, PrefixMethod);
+                if (_prefix == null) {
+                    Logger.LogWarning(
+                        $"WardIsLove: {PrefixClass}.{PrefixMethod} was not found, so its check may still stop " +
+                        "Deconstruct Boats And Carts. A WardIsLove update has most likely changed the method.");
+                    return false;
+                }
+
+                // Copying the method is the first thing patching does. A WardIsLove built for another
+                // game version can fail that (3.7.2 on 1.0.21 cannot load its ward class), and the
+                // failure would throw out of PatchAll and stop the rest of this mod from loading.
+                try {
+                    PatchProcessor.GetOriginalInstructions(_prefix);
+                } catch (Exception e) {
+                    Logger.LogWarning(
+                        $"WardIsLove: {PrefixMethod} could not be read, so its check may still stop " +
+                        $"Deconstruct Boats And Carts. This WardIsLove may not support this game version. {e.Message}");
+                    return false;
+                }
+
+                return true;
+            }
+
+            [HarmonyTargetMethod]
+            private static MethodBase TargetMethod() {
+                return _prefix;
+            }
+
+            // AllowRemoval takes the same stack as the ldfld it replaces, as in RemovePieceTranspiler,
+            // and the same rule applies: anything unexpected leaves the method untouched. AllowRemoval
+            // only opens the first check. The occupancy rule still runs in the game's method, which
+            // this prefix now lets through.
+            [HarmonyTranspiler]
+            private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
+                List<CodeInstruction> codes = new List<CodeInstruction>();
+                foreach (CodeInstruction instruction in instructions) { codes.Add(new CodeInstruction(instruction)); }
+
+                int flagReads = 0;
+                foreach (CodeInstruction code in codes) {
+                    if (code.LoadsField(CanBeRemovedField)) {
+                        code.opcode = OpCodes.Call;
+                        code.operand = AllowRemovalMethod;
+                        flagReads++;
+                    }
+                }
+
+                if (flagReads == 1) { return codes; }
+
+                Logger.LogWarning(
+                    $"WardIsLove: expected one read of Piece.m_canBeRemoved in {PrefixMethod}, found " +
+                    $"{flagReads}, so its check may still stop Deconstruct Boats And Carts. A WardIsLove " +
+                    "update has most likely changed the method.");
+                return instructions;
+            }
         }
     }
 }
