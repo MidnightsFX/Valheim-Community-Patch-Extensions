@@ -99,6 +99,7 @@ namespace CommunityPatchExtras {
             Patches.BirdHitSkillPatch.BindConfig();
             Patches.StationAddAllPatch.BindConfig();
             Patches.PortalTagLengthPatch.BindConfig();
+            Patches.SmoothSteepStairsPatch.BindConfig();
             Patches.CreationTrackerPatch.BindConfig();
         }
 
