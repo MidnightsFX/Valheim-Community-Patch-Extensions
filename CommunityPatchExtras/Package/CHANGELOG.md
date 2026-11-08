@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.5
+- Boss music now keeps playing for the whole fight even when the game's continuous music setting is off, which players can turn off.
+
 ## 0.5.4
 - Adds an optional tracker that counts which objects are created the most, to help find something spawning far more than it should.
 - The hammer can now remove boats and carts when WardIsLove is installed.

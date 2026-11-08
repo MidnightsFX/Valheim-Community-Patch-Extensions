@@ -259,6 +259,18 @@ Per-machine: these are your own controls and are not synced from the server.
   announcements. The default matches the Community Patch's **Boss Defeat Key Range**, so everyone
   credited with a kill also sees it announced. 0 shows them to nobody. Server-synced.
 
+### Music
+
+- **Continuous Boss Music** *(default on, vanilla off)* — a boss's music keeps playing for the
+  whole fight, even with **Continuous Music** turned off in the game's audio settings. With that
+  setting off, vanilla plays the boss track once and then leaves the rest of the fight silent for
+  about two minutes before it may start again; walking out of range and back in mid-fight hits the
+  same wait. Covers every boss that has its own fight music, and any modded boss that plays its
+  music the same way. All other music, including the ambience in a boss's arena before the fight,
+  still follows the game's setting, and with **Continuous Music** on this changes nothing.
+
+Per-machine: this only affects what you hear and is not synced from the server.
+
 ### HUD & Notifications
 
 In native Valheim, Game.UpdateSaving broadcasts a 30-second autosave countdown warning ($msg_worldsavewarning 30s) with MessageHud.MessageType.Center. This displays a giant, screen-filling yellow banner directly across the player's crosshair and combat view. Many dedicated servers and administrative tools broadcast similar countdowns and save confirmations to the center of the screen as well.
