@@ -146,6 +146,21 @@ gallery, the menu's Credits button, and the `cinematic` console command — are 
   WardIsLove, whose wards protect vehicles like any other piece. Server-synced; a client on a
   server without this mod keeps vanilla behaviour.
 
+### Movement
+
+- **Smooth Steep Stairs** *(default on, vanilla off)* — you walk up a Wood Ladder or Grausten Steep
+  Stairs in one smooth motion, at your walking, running or sprinting speed. Vanilla throws you up
+  them in a series of hops: they are steeper than a player can walk, so each one carries triggers
+  that launch you up and forward every half second, and you spend most of the climb in the air,
+  dropping back a little after each hop. Also covers the steep stairs found in the Ashlands and the
+  ladders in Fuling villages.
+
+  Only the climb itself changes. Your character still moves through the physics engine, so walls,
+  other pieces and creatures stop you as usual, and walking down, stepping sideways, standing still,
+  jumping, swimming or riding all behave as in vanilla. Creatures keep vanilla's hops, and so does a
+  player whose game doesn't run this mod. Server-synced; a client on a server without this mod keeps
+  vanilla behaviour.
+
 ### Portals
 
 - **Extend Portal Tag Limit** *(default on, vanilla off)* — raises the longest tag you can give a

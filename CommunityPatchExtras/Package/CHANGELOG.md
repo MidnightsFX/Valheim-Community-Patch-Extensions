@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.5
+- Ladders and other steep stairs can now be walked up in one smooth motion instead of a series of hops, which admins can turn off.
+
 ## 0.5.4
 - Adds an optional tracker that counts which objects are created the most, to help find something spawning far more than it should.
 - The hammer can now remove boats and carts when WardIsLove is installed.
