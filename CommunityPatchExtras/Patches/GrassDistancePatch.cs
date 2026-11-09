@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
 using BepInEx.Configuration;
 using HarmonyLib;
 using UnityEngine;
@@ -6,15 +8,18 @@ using UnityEngine.Rendering;
 using CommunityPatchExtras.Common;
 
 namespace CommunityPatchExtras.Patches {
-    // Exposes how far from the player Valheim grows grass - ClutterSystem.m_distance (ClutterSystem.cs:99,
-    // shipped 40 m), the radius of the square-spiral of 8 m clutter patches rebuilt around the camera every
-    // frame. Vanilla offers no setting for it: the graphics menu's Vegetation slider only scales how MUCH
-    // clutter goes in a patch (Off/Low/Med/High divide m_amount), never how far out patches are placed, so
-    // grass has always stopped dead at 40 m while the terrain under it runs to the horizon.
+    // Exposes how far from the player Valheim grows grass - ClutterSystem.m_distance, the radius of the
+    // square-spiral of clutter patches rebuilt around the camera every frame. The field defaults to 40 m
+    // (ClutterSystem.cs:99), but that is not what anyone sees in a world: the scenes set their own, and as of
+    // the Deep North rip the world scene (main.unity) ships 45 m with 10 m patches while the main menu's
+    // background (start.unity) ships 40 m with 8 m ones. Vanilla offers no setting for it: the graphics
+    // menu's Vegetation slider only scales how MUCH clutter goes in a patch (Off/Low/Med/High divide
+    // m_amount), never how far out patches are placed, so grass has always stopped dead at 45 m while the
+    // terrain under it runs to the horizon.
     //
     // m_distance is read in four places, and writing the one field drives all of them:
     //   IsHeightmapReady     ClutterSystem.cs:213 - Heightmap.HaveQueuedRebuild within m_distance
-    //   GeneratePatches      ClutterSystem.cs:234 - ring count, CeilToInt((m_distance - 4) / 8)
+    //   GeneratePatches      ClutterSystem.cs:234 - ring count, CeilToInt((m_distance - size / 2) / size)
     //   GeneratePatch        ClutterSystem.cs:252 - per-patch cull, DistanceXZ > m_distance
     //   GenerateVegPatch     ClutterSystem.cs:465 - clamps each patch's instanced fade distance
     //
@@ -37,10 +42,12 @@ namespace CommunityPatchExtras.Patches {
     // Two things have to come with the distance or the setting does not deliver what it promises:
     //
     //  1. FADE DISTANCE. Instanced clutter - which is most grass - fades out over
-    //     InstanceRenderer.m_lodMinDistance..m_lodMaxDistance (5 m and 20 m on the shipped prefabs,
-    //     InstanceRenderer.cs:19-21), and vanilla's line 465 only ever clamps a clone's max DOWN to
-    //     m_distance - 4. Raising m_distance alone would therefore generate patches out to 256 m that
-    //     still faded to nothing at 20 m: all of the cost, none of the view. So the clutter prefabs' own
+    //     InstanceRenderer.m_lodMinDistance..m_lodMaxDistance (15 m and 100 m on most shipped grass
+    //     prefabs, 999 m on a few, 10 m and 20 m on small rock1 - the class defaults of 5 and 20 at
+    //     InstanceRenderer.cs:19-21 are overridden by every prefab), and vanilla's line 465 only ever
+    //     clamps a clone's max DOWN to m_distance - 4. Raising m_distance alone would therefore generate
+    //     patches out to 256 m that still faded to nothing by 100 m: much of the cost for little of the
+    //     view. So the clutter prefabs' own
     //     two fade distances are scaled by the same factor as the distance, which vanilla's own clamp then
     //     caps at the generated radius for free. Scaling both keeps the near-field density profile the
     //     game shipped instead of stretching it thin. The prefabs are shared assets that we write to, so
@@ -58,6 +65,45 @@ namespace CommunityPatchExtras.Patches {
     //     multi-second freeze. So while the distance is raised, rebuildAll is forced off - which costs
     //     nothing, because with a budget the normal path fills just as fast without the stall - and the
     //     one-per-frame gate becomes a configurable Grass Patches Per Frame budget.
+    //
+    // THE DEFAULT IS THE GAME'S OWN, as 0 rather than as a number of metres. Up to 0.6.0 the default was
+    // 40, described as "exactly vanilla" - true of the field's code default and the menu scene, but the
+    // world scene ships 45, so every install left at the default had its grass pulled IN by 5 m. A number
+    // would go stale again the next time Irongate moves the scene value; 0 means "whatever the scene
+    // shipped" (_vanillaDistance, read at every Awake), so it cannot. Explicit values below 16 are held
+    // at 16, the lowest the setting has ever accepted.
+    //  The catch is existing files: BepInEx writes every value out, so every install that never touched
+    //  the setting has "Grass Distance = 40" on disk, indistinguishable by value from someone who set 40
+    //  on purpose. What does tell them apart is the comment BepInEx writes above it - "# Default value: 40"
+    //  only ever appears in a file a 0.6.0-or-earlier build wrote - so a 40 under that comment is moved to
+    //  0 once, and a 40 set after that is left alone. The comment has to be read before anything is bound:
+    //  ValConfig saves on every Bind, and a save drops the comments of entries not yet bound. Hence
+    //  ReadConfigFile, which ValConfig calls before CreateConfigValues.
+    //
+    // ANOTHER MOD SETTING THE RADIUS. Vanilla never writes m_distance after Awake, so a value here that
+    // this class did not write was put there by another mod - FarLands 1.3.0 does it once a second
+    // (GrassRadius.Bind, from FarTerrain.RefreshSettings) to its own Detail.GrassDistance, 200 m by
+    // default, and ValheimVisuals does the same. Correcting it back is a fight: each side's write tells
+    // the other its value is wrong, and each write wipes every patch (our ClearAll, their ResetGrass),
+    // so the far grass never finishes growing in before it is cleared again. FarLands also clears the
+    // grass whenever the radius it finds is not its own, so there is no way to win it - this class
+    // stands aside instead, for as long as the other mod holds the radius:
+    //  - it writes no distance and clears nothing, and puts back the shipped fades it stretched, but
+    //    only on prefabs where the value is still the one written here. The other mod may have set
+    //    fades of its own on top (FarLands' GrassLimits lifts every fade of 90 m or more to 999 m and
+    //    records our stretched value as the one to restore), and those are its to keep.
+    //  - the fill-rate budget and the forced-off rebuildAll stay, because they key off the radius
+    //    being raised, not off who raised it: a mod's 200 m built in one frame is the same freeze.
+    //    FarLands reads PatchesPerFrame for its own patch walker for exactly that reason.
+    //  - it takes the radius back when the other mod puts back the value it found, which is the
+    //    vanilla distance or the one written here (FarLands' Restore, when its GrassDistance is set
+    //    to 0), and re-applies in full, fades and all. Any other change of value is the other mod
+    //    changing its own setting and keeps us aside.
+    //  FarLands reflects on this class (ValheimMods.Shared.GrassPatches.ReadExtras): it expects
+    //  exactly the three prefixes below on UpdateGrass, GeneratePatches and GeneratePatch, under these
+    //  method names, and the static fields PatchesPerFrame, _vanillaDistance and _vanillaCaptured with
+    //  these types. Any other patch from this mod on those methods or TimeoutPatches, or a renamed
+    //  member, makes it leave the grass to the game - keep all of it as it is.
     //
     // Why this is client config, and the only setting in this mod that is: ClutterSystem is pure local
     // rendering. Nothing here is a ZDO, nothing is sent, nothing is negotiated, and a dedicated server's
@@ -90,6 +136,18 @@ namespace CommunityPatchExtras.Patches {
         internal static ConfigEntry<float> Distance;
         internal static ConfigEntry<int> PatchesPerFrame;
 
+        // Grass Distance's value that means "the game's own", its default from 0.6.1.
+        private const float GameDistance = 0f;
+
+        // The lowest explicit distance: what the setting has always bottomed out at.
+        private const float LeastDistance = 16f;
+
+        // The default up to 0.6.0, which was meant as vanilla. See THE DEFAULT IS THE GAME'S OWN above.
+        private const float OldDefault = 40f;
+
+        // Set by ReadConfigFile: the file on disk still carries the old default's comment over the entry.
+        private static bool _fileHasOldDefault;
+
         // ClutterSystem.m_distance as the scene shipped it. Re-read at every Awake rather than hardcoded:
         // it is scene data on a per-scene instance, so the menu background's is not necessarily the
         // world's, and an Irongate change to the shipped 40 degrades gracefully.
@@ -104,34 +162,88 @@ namespace CommunityPatchExtras.Patches {
         // process would leave such a prefab unstretched in game.
         private static readonly List<ClutterLod> Lods = new List<ClutterLod>();
         private static readonly HashSet<InstanceRenderer> Captured = new HashSet<InstanceRenderer>();
-        private static bool _lodsScaled;
+
+        // The factor the prefab fades are stretched by right now; 1 while they hold their shipped values.
+        private static float _lodScale = 1f;
+
+        // The radius as this class last left it: the scene's own value until Apply first writes, then
+        // whatever Apply wrote. Finding anything else in m_distance means another mod has set it.
+        private static float _ours;
+
+        // The radius another mod has set, for as long as this class stands aside for it; NaN otherwise.
+        private static float _theirs = float.NaN;
+
+        private static bool StandingAside => !float.IsNaN(_theirs);
 
         // New patches still allowed this frame beyond vanilla's first. Reset per GeneratePatches pass.
         private static int _budget;
+
+        // Reads, before ValConfig binds anything, whether the file still holds Grass Distance under the
+        // old default's comment. Plain line reading of BepInEx's own format: the entry's comment lines
+        // ("## description", "# Default value: ...") sit directly above its "Key = value" line, inside
+        // its "[Section]". Anything unexpected only means no migration, which is the safe outcome.
+        internal static void ReadConfigFile(string path) {
+            _fileHasOldDefault = false;
+            try {
+                if (!File.Exists(path)) { return; }
+
+                bool inSection = false;
+                bool oldComment = false;
+                foreach (string raw in File.ReadAllLines(path)) {
+                    string line = raw.Trim();
+                    if (line.StartsWith("[")) {
+                        inSection = line == "[Grass]";
+                        oldComment = false;
+                    } else if (!inSection || line.Length == 0) {
+                        continue;
+                    } else if (line.StartsWith("# Default value:")) {
+                        oldComment = line == "# Default value: 40";
+                    } else if (line.StartsWith("#")) {
+                        continue;
+                    } else if (line.StartsWith("Grass Distance =")) {
+                        _fileHasOldDefault = oldComment;
+                        return;
+                    } else {
+                        oldComment = false;
+                    }
+                }
+            } catch (Exception e) {
+                Logger.LogWarning($"Could not read the config file to check Grass Distance's old default: {e.Message}");
+            }
+        }
 
         internal static void BindConfig() {
             Distance = ValConfig.BindClientConfig(
                 "Grass",
                 "Grass Distance",
-                40f,
-                "How far from you, in metres, grass and other ground clutter is grown. 40 is exactly " +
-                "vanilla. Raising it is capped at whatever the loaded zones can actually cover - your " +
-                "Simulation Distance setting, so 128 m at its default of 2 - because clutter cannot be " +
-                "placed on terrain that is not loaded. Cost grows with the SQUARE of this number, and it " +
-                "is memory rather than framerate that bites first - each step up is roughly double the " +
-                "grass patches of the last, so raise it a little at a time and watch RAM. Lower it below " +
-                "40 to buy back performance on a weak machine. Per-machine: this is a rendering setting " +
+                GameDistance,
+                "How far from you, in metres, grass and other ground clutter is grown. 0 leaves it at " +
+                "the game's own distance (45 m); anything from 16 up sets it. Raising it is capped at " +
+                "whatever the loaded zones can actually cover - your Simulation Distance setting, so " +
+                "128 m at its default of 2 - because clutter cannot be placed on terrain that is not " +
+                "loaded. Cost grows with the SQUARE of this number, and it is memory rather than " +
+                "framerate that bites first - each step up is roughly double the grass patches of the " +
+                "last, so raise it a little at a time and watch RAM. Set it below 45 to buy back " +
+                "performance on a weak machine. If another mod (such as FarLands) sets how far grass " +
+                "grows too, this setting stands aside for it. Per-machine: this is a rendering setting " +
                 "and is not synced from the server.",
                 false,
-                16f,
+                0f,
                 256f);
+
+            // Before SettingChanged is wired, so this does not schedule an Apply of its own.
+            if (_fileHasOldDefault && Mathf.Approximately(Distance.Value, OldDefault)) {
+                Distance.Value = GameDistance;
+                Logger.LogInfo("Grass Distance was at 40, the old default meant as the game's own distance, " +
+                    "which is 45 m in a world; it now follows the game's own (0).");
+            }
 
             PatchesPerFrame = ValConfig.BindClientConfig(
                 "Grass",
                 "Grass Patches Per Frame",
                 8,
                 "How many clutter patches may be built per frame while Grass Distance is raised above " +
-                "vanilla. Vanilla builds 1, which is fine over its 40 m but would leave a raised radius " +
+                "vanilla. Vanilla builds 1, which is fine over its 45 m but would leave a raised radius " +
                 "visibly growing in for tens of seconds. Higher fills faster after a world load or a " +
                 "graphics change at the cost of a heavier frame while it does. Ignored at or below the " +
                 "vanilla distance.",
@@ -150,6 +262,8 @@ namespace CommunityPatchExtras.Patches {
             if (zones == null || Distance == null) { return _vanillaDistance; }
 
             float configured = Distance.Value;
+            if (configured <= GameDistance) { return _vanillaDistance; }
+            configured = Mathf.Max(LeastDistance, configured);
 
             // Lowering needs no ceiling - less than vanilla is always coverable.
             if (configured <= _vanillaDistance) { return configured; }
@@ -168,16 +282,26 @@ namespace CommunityPatchExtras.Patches {
             return Mathf.Max(_vanillaDistance, Mathf.Min(configured, ceiling));
         }
 
-        private static void Apply() => Apply("setting changed");
+        private static void Apply() {
+            if (StandingAside) {
+                Logger.LogInfo($"Grass Distance changed, but another mod holds the grass radius at " +
+                    $"{_theirs:0.#} m; it applies once that mod gives the radius back.");
+                return;
+            }
+            Apply("setting changed", false);
+        }
 
-        private static void Apply(string reason) {
+        // force re-applies even when the radius already matches: taking it back from another mod, whose
+        // own fades and half-built patches may sit under a distance that happens to equal ours.
+        private static void Apply(string reason, bool force) {
             ClutterSystem clutter = ClutterSystem.instance;
-            if (clutter == null || !_vanillaCaptured) { return; }
+            if (clutter == null || !_vanillaCaptured || StandingAside) { return; }
 
             float target = ResolveDistance();
-            if (Mathf.Approximately(clutter.m_distance, target)) { return; }
+            if (!force && Mathf.Approximately(clutter.m_distance, target)) { return; }
 
             clutter.m_distance = target;
+            _ours = target;
             ApplyLodScale(target);
 
             // Every live patch was built under the old radius: ones now out of range would linger for
@@ -209,7 +333,7 @@ namespace CommunityPatchExtras.Patches {
         }
 
         // Stretches the shipped fade distances by the same factor as the view distance, so grass reaches
-        // the new radius instead of dissolving at the shipped 20 m. Always computed from the captured
+        // the new radius instead of dissolving where the shipped fades end. Always computed from the captured
         // originals rather than the live values, which keeps repeated applies from compounding.
         private static void ApplyLodScale(float distance) {
             float scale = distance / _vanillaDistance;
@@ -217,14 +341,61 @@ namespace CommunityPatchExtras.Patches {
 
             // Nothing to do when we are at or below vanilla and never stretched: vanilla's own clamp at
             // ClutterSystem.cs:338 already caps the clones correctly on the way down.
-            if (!stretch && !_lodsScaled) { return; }
-            _lodsScaled = stretch;
+            if (!stretch && _lodScale == 1f) { return; }
+            _lodScale = stretch ? scale : 1f;
 
             foreach (ClutterLod lod in Lods) {
                 if (lod.Renderer == null) { continue; }
-                lod.Renderer.m_lodMinDistance = stretch ? lod.Min * scale : lod.Min;
-                lod.Renderer.m_lodMaxDistance = stretch ? lod.Max * scale : lod.Max;
+                lod.Renderer.m_lodMinDistance = lod.Min * _lodScale;
+                lod.Renderer.m_lodMaxDistance = lod.Max * _lodScale;
             }
+        }
+
+        // Puts the shipped fades back on stepping aside, but only where a prefab still holds the value
+        // written here: the mod taking the radius over may already have set its own on top, and those
+        // stay. With FarLands that means the far fades it lifted to 999 m keep 999 while the near ones
+        // return to what it would have found had it bound first.
+        private static void ReleaseLods() {
+            if (_lodScale == 1f) { return; }
+
+            foreach (ClutterLod lod in Lods) {
+                if (lod.Renderer == null) { continue; }
+                if (Mathf.Approximately(lod.Renderer.m_lodMinDistance, lod.Min * _lodScale)) {
+                    lod.Renderer.m_lodMinDistance = lod.Min;
+                }
+                if (Mathf.Approximately(lod.Renderer.m_lodMaxDistance, lod.Max * _lodScale)) {
+                    lod.Renderer.m_lodMaxDistance = lod.Max;
+                }
+            }
+            _lodScale = 1f;
+        }
+
+        // Works out, once per grass update, whether another mod holds the radius; true while it does.
+        // See ANOTHER MOD SETTING THE RADIUS above for why this stands aside rather than correcting it.
+        private static bool StandAside(float live) {
+            if (!StandingAside) {
+                if (Mathf.Approximately(live, _ours)) { return false; }
+
+                _theirs = live;
+                ReleaseLods();
+                Logger.LogInfo($"Another mod set the grass radius to {live:0.#} m (Grass Distance had it at " +
+                    $"{_ours:0.#} m). Grass Distance stands aside while that mod holds it, rather than both " +
+                    "clearing the grass over and over.");
+                return true;
+            }
+
+            if (Mathf.Approximately(live, _theirs)) { return true; }
+
+            // A new value that is neither one it could have found is that mod changing its own setting.
+            if (!Mathf.Approximately(live, _vanillaDistance) && !Mathf.Approximately(live, _ours)) {
+                _theirs = live;
+                return true;
+            }
+
+            _theirs = float.NaN;
+            Logger.LogInfo($"Another mod gave the grass radius back ({live:0.#} m); Grass Distance applies again.");
+            Apply("taken back", true);
+            return false;
         }
 
         // m_distance is freshly scene-deserialized here and nothing has written it yet.
@@ -238,6 +409,8 @@ namespace CommunityPatchExtras.Patches {
 
             _vanillaDistance = __instance.m_distance;
             _vanillaCaptured = true;
+            _ours = __instance.m_distance;
+            _theirs = float.NaN;
             CaptureLods(__instance);
 
             // This system starts at its scene's distance, so the shared prefabs must match it. A world's
@@ -251,13 +424,17 @@ namespace CommunityPatchExtras.Patches {
         // chasing events because the ceiling moves for reasons this class does not own - ZoneSystem
         // appearing at world load, an admin editing Zone Load Radius, a server syncing its own - and
         // re-deriving it is two multiplies against a field we then compare. Apply() does nothing at all
-        // when the answer has not changed, so the steady-state cost is that comparison.
+        // when the answer has not changed, so the steady-state cost is that comparison. The same poll is
+        // where another mod taking the radius over, and giving it back, is noticed.
         [HarmonyPrefix]
         [HarmonyPatch("UpdateGrass")]
         private static void UpdateGrassPrefix(ClutterSystem __instance, ref bool rebuildAll) {
             if (!_vanillaCaptured) { return; }
 
-            if (!Mathf.Approximately(__instance.m_distance, ResolveDistance())) { Apply("zone coverage"); }
+            if (!StandAside(__instance.m_distance) &&
+                !Mathf.Approximately(__instance.m_distance, ResolveDistance())) {
+                Apply("zone coverage", false);
+            }
 
             // Vanilla ignores its own one-per-frame gate when this is set and builds every missing patch
             // in one frame - survivable over 40 m, a multi-second freeze over 256 m. The budget below

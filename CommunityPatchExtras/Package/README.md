@@ -42,10 +42,15 @@ confirms it is running this mod too. A client on a server without this mod stays
 
 ### Grass
 
-- **Grass Distance** *(default 40 m = vanilla)* — how far from you grass and other ground clutter
-  is grown. Valheim has never offered this: the graphics menu's Vegetation slider only changes how
-  *much* clutter goes into a patch, never how far out patches are placed, so grass has always
-  stopped dead at 40 m while the terrain under it ran to the horizon.
+- **Grass Distance** *(default 0 = the game's own, 45 m)* — how far from you grass and other ground
+  clutter is grown. Valheim has never offered this: the graphics menu's Vegetation slider only
+  changes how *much* clutter goes into a patch, never how far out patches are placed, so grass has
+  always stopped dead at 45 m while the terrain under it ran to the horizon. Leave it at 0 to keep
+  the game's own distance, or set anything from 16 m up.
+
+  Up to 0.6.0 the default was 40, which was meant as vanilla but pulled grass in from the game's
+  45 m. A config still holding that old default is moved to 0 once; a 40 you set yourself afterwards
+  is kept.
 
   The ceiling is the loaded world, not an arbitrary number. Clutter can only be placed where a
   zone is actually loaded, so this is clamped live to what your **Simulation Distance** covers —
@@ -55,18 +60,24 @@ confirms it is running this mod too. A client on a server without this mod stays
 
   Cost grows with the **square** of the distance, and it is memory that bites first, not framerate:
   every instanced clutter type in every patch allocates a fixed 64 KB buffer regardless of how much
-  grass it holds, so the ~25 MB vanilla spends at 40 m becomes a few hundred MB at 128 m and can
+  grass it holds, so the ~25 MB vanilla spends at 45 m becomes a few hundred MB at 128 m and can
   approach a gigabyte at 256 m. That is why the default is exactly vanilla — raise it a little at a
-  time and watch RAM, not FPS. Lowering it below 40 is a legitimate way to buy performance back on
+  time and watch RAM, not FPS. Lowering it below 45 is a legitimate way to buy performance back on
   a weak machine.
 
   Two things come along for the ride so the setting actually delivers. Grass fade distances are
   scaled by the same factor, because vanilla only ever clamps them *down* and raised patches would
-  otherwise still dissolve at 20 m — all of the cost, none of the view. And the fill rate is
+  otherwise still dissolve by 100 m — much of the cost for little of the view. And the fill rate is
   budgeted (below), because vanilla builds one patch per frame and rebuilds *everything* in a single
   frame after a world load or a graphics change; at a raised radius that is a multi-second freeze.
+
+  If another mod sets how far grass grows too — FarLands 1.3.0 and later does by default, as does
+  ValheimVisuals — Grass Distance stands aside for it instead of resetting it. Two mods correcting each
+  other's radius clear all the grass each time, so the far grass would never finish growing in. The
+  log says when this happens, and Grass Distance applies again if that mod hands the radius back.
+  Grass Patches Per Frame still paces the fill-in either way.
 - **Grass Patches Per Frame** *(default 8, advanced)* — how fast a raised radius fills in. Vanilla's
-  rate is 1, which is fine over 40 m but would leave 256 m visibly growing in for the better part of
+  rate is 1, which is fine over 45 m but would leave 256 m visibly growing in for the better part of
   a minute. Higher fills faster at the cost of a heavier frame while it does. Ignored at or below
   the vanilla distance.
 

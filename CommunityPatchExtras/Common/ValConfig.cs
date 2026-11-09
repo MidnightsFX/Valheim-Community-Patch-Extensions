@@ -34,6 +34,9 @@ namespace CommunityPatchExtras {
             // ensure all the config values are created
             cfg = cf;
             cfg.SaveOnConfigSet = true;
+
+            // Before the first Bind: each Bind saves, and a save drops the comment lines this reads.
+            Patches.GrassDistancePatch.ReadConfigFile(cf.ConfigFilePath);
             CreateConfigValues(cf);
             Logger.SetDebugLogging(EnableDebugMode.Value);
 
