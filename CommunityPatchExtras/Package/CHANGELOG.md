@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.5.5
+## 0.6.0
 - Boss music now keeps playing for the whole fight even when the game's continuous music setting is off, which players can turn off.
 - Ladders and other steep stairs can now be walked up in one smooth motion instead of a series of hops, which admins can turn off.
 
