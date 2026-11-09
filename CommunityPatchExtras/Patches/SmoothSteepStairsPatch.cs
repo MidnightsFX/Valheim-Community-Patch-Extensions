@@ -66,8 +66,9 @@ namespace CommunityPatchExtras.Patches {
         // The top of the stair's highest trigger: a climb that ends with the feet above it is at the top.
         private static float _stairTop = float.NegativeInfinity;
 
-        // The physics step the climb last set the player's velocity in.
+        // The physics step the climb last set the player's velocity in, and the upward speed it set.
         private static float _climbedAt = float.NegativeInfinity;
+        private static float _climbRise;
 
         // How far ahead of the player's capsule "pressed against the stair" looks.
         private const float Reach = 0.1f;
@@ -155,8 +156,19 @@ namespace CommunityPatchExtras.Patches {
             // A climb starts on the ground, as vanilla's hop does, and then carries itself.
             if (!player.IsOnGround() && !Climbing(player)) { return true; }
 
+            // A stair piece carries its own ZNetView. A stair built into a location, such as the ladders
+            // up Fader's bell towers, has none, and the nearest one above it is the LocationProxy holding
+            // the whole location: taking that would make every wall and floor there count as the stair,
+            // and put its top at the highest trigger in the location. The trigger's own parent, which
+            // holds that stair's triggers and treads, stands for the stair there instead.
             ZNetView view = __instance.GetComponentInParent<ZNetView>();
-            Transform stair = view ? view.transform : __instance.transform.root;
+            Transform stair;
+            if (view && !view.GetComponent<LocationProxy>()) {
+                stair = view.transform;
+            } else {
+                Transform parent = __instance.transform.parent;
+                stair = parent ? parent : __instance.transform;
+            }
             if (stair != _stair) {
                 _stair = stair;
                 _stairTop = float.NegativeInfinity;
@@ -181,7 +193,6 @@ namespace CommunityPatchExtras.Patches {
             Player player = Player.m_localPlayer;
             if (!player || !ReferenceEquals(__instance, player)) { return; }
 
-            bool climbedLastStep = Time.fixedTime - _climbedAt <= Time.fixedDeltaTime * 1.5f;
             if (Climb(player, ref vel, targetVel)) {
                 _climbedAt = Time.fixedTime;
                 return;
@@ -189,8 +200,15 @@ namespace CommunityPatchExtras.Patches {
 
             // Past the stair's top trigger the climb is over: its upward speed is not carried on into a
             // hop over the floor above. Below it this is only the gap between two triggers, which the
-            // body crosses on its own speed. A jump ends a climb too, but Climb forgets the climb then.
-            if (climbedLastStep && vel.y > 0f && player.transform.position.y >= _stairTop) { vel.y = 0f; }
+            // body crosses on its own speed. A jump is left alone: read after Climb, which forgets the
+            // climb when it sees one, and a jump made just after the climb ended is told apart the same
+            // way, by an upward speed well above the climb's own. Zeroing it would cost the jump a tenth
+            // of its upward speed, the share of a change vanilla applies to a body in the air.
+            bool climbedLastStep = Time.fixedTime - _climbedAt <= Time.fixedDeltaTime * 1.5f;
+            if (climbedLastStep && vel.y > 0f && vel.y <= _climbRise + JumpMargin &&
+                player.transform.position.y >= _stairTop) {
+                vel.y = 0f;
+            }
         }
 
         // Sets this step's velocity up the stair; false when the player is not climbing.
@@ -220,6 +238,7 @@ namespace CommunityPatchExtras.Patches {
             Vector3 flat = Flat(vel);
             Vector3 sideways = flat - _climbDir * Vector3.Dot(flat, _climbDir);
             vel = sideways + _climbDir * (speed * Run) + Vector3.up * rise;
+            _climbRise = rise;
 
             // The climber stands on the stair. Without this, a step in which the body happened not to
             // touch a tread counts as airborne, and vanilla then applies only a tenth of the change
