@@ -133,14 +133,6 @@ gallery, the menu's Credits button, and the `cinematic` console command — are 
   (`Hen,Chicken`). Matched ignoring case; listed creatures keep petting, and any already following
   someone is released, except summoned minions, which keep following their summoner. Server-synced.
 
-- **Shared Summon Limit** *(default on, vanilla off)* — a staff that summons more than one kind of
-  creature counts them all toward its one summon limit. Vanilla counts each kind separately, so the
-  Spirit Caller, which calls a random wolf, boar, moose or bear, lets you keep a full limit of
-  *each* — four times what the staff allows — while the Dead Raiser, which only raises skeletons,
-  stops where it should. On, the oldest summon is dismissed first, exactly as vanilla does for
-  skeletons. Modded staffs that summon several creatures are covered too. Server-synced; held at
-  vanilla on a server without this mod.
-
 ### Building
 
 - **Deconstruct Boats And Carts** *(default on, vanilla off)* — the hammer's remove click works on
@@ -352,6 +344,11 @@ and Jotunn. Install on the server and all clients; versions are checked on conne
 ## Known issues
 
 None yet. Report at https://github.com/MidnightsFX/Valheim-Community-Patch-Extensions
+
+<!--
+AI_Assisted_Creation: This assembly was partially or fully created with the assistance of generative AI (Claude Code, using Anthropic's Claude models).
+AI_Model_Vendor: Anthropic
+-->
 
 ---
 

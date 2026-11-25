@@ -38,7 +38,7 @@ namespace CommunityPatchExtras.Patches {
     // skills are saved on the player's own machine, and a hit is only ever computed there.
     //
     // SERVER-SYNCED: it changes how skills progress, which is a world rule. Held at vanilla until
-    // Jotunn's config sync confirms the server runs this mod, as SharedSummonLimitPatch does.
+    // Jotunn's config sync confirms the server runs this mod, as VehicleDeconstructPatch does.
     [HarmonyPatch]
     internal static class BirdHitSkillPatch {
         internal static ConfigEntry<bool> Enabled;

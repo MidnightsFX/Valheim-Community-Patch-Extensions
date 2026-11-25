@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.2
+- Updated for Valheim 1.0.30.
+- Removed spirit caller summon limiting, which 1.0.30 now handles properly.
+
 ## 0.6.1
 - Fixes grass rebuilds clashing with Farlands
 - Changes default grass draw distance to match new vanilla default.
